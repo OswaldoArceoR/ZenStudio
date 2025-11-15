@@ -3,7 +3,7 @@
 $servername = "localhost";
 $usename = "root";
 $password = "";
-$database ="zenstudio"; //Nombre provisional xd
+$database ="zenstudi"; //Nombre provisional xd
 
 //mostrar errores de mysql
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
