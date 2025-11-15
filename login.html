@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - ZenStudio</title>
+
+    <link rel="stylesheet" href="CSS/style.css">
+
+    <link rel="stylesheet" href="CSS/login.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="toggle-container" style="right: 110px;">
+        <input type="checkbox" id="themeToggle">
+        <label for="themeToggle" class="toggle">
+            <span class="sun"></span>
+            <span class="moon"></span>
+            </label>
+    </div>
+
+    <audio id="ambient-sound" loop>
+        <source src="sonidodelluvia.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="form-container">
+        <h2>Iniciar Sesión</h2>
+
+        <form>
+            <input type="text" name="user_or_email" placeholder="Correo electrónico o nombre de usuario" required>
+            <input type="password" name="password" placeholder="Contraseña" required>
+            <button type="submit" class="btn login">Entrar</button>
+        </form>
+
+        <p class="alt-text">
+            ¿No tienes una cuenta?
+            <a href="register.html">Crea una aquí</a>
+        </p>
+    </div>
+
+    <script>
+        /* ============================
+            FADE-IN DEL SONIDO
+        ============================= */
+        function fadeInAudio(audio, targetVolume = 0.30, duration = 3000) {
+            audio.volume = 0;
+            audio.play();
+
+            let step = targetVolume / (duration / 100);
+
+            let fade = setInterval(() => {
+                if (audio.volume < targetVolume) {
+                    audio.volume = Math.min(audio.volume + step, targetVolume);
+                } else {
+                    clearInterval(fade);
+                }
+            }, 100);
+        }
+
+        const audio = document.getElementById("ambient-sound");
+        fadeInAudio(audio);
+
+        /* ============================
+            SWITCH ANIMADO (THEME TOGGLE)
+        ============================ */
+        const toggle = document.getElementById("themeToggle");
+
+        // Aplicar estado guardado
+        if (localStorage.getItem("theme") === "dark") {
+            document.body.classList.add("dark-mode");
+            if (toggle) toggle.checked = true;
+        }
+
+        // Cambios en el switch
+        if (toggle) {
+            toggle.addEventListener("change", () => {
+                if (toggle.checked) {
+                    document.body.classList.add("dark-mode");
+                    localStorage.setItem("theme", "dark");
+                } else {
+                    document.body.classList.remove("dark-mode");
+                    localStorage.setItem("theme", "light");
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>

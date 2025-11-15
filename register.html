@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - ZenStudio</title>
+
+    <link rel="stylesheet" href="CSS/style.css">
+
+    <link rel="stylesheet" href="CSS/register.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="toggle-container" style="right: 110px;">
+        <input type="checkbox" id="themeToggle">
+        <label for="themeToggle" class="toggle">
+            <span class="sun"></span>
+            <span class="moon"></span>
+            </label>
+    </div>
+
+    <audio id="ambient-sound" loop>
+        <source src="sonidodelviento.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="form-container">
+        <h2>Crear Cuenta</h2>
+
+        <form action="registroUsuario.php" method="POST">
+            <input type="text" name="nombre" placeholder="Nombre completo" required>
+            <input type="text" name="username" placeholder="Nombre de usuario" required>
+            <input type="email" name="email" placeholder="Correo electrónico" required>
+            <input type="password" name="password" placeholder="Contraseña" required>
+            <input type="password" name="confirm_password" placeholder="Confirmar contraseña" required>
+            <button type="submit" class="btn register">Registrarse</button>
+        </form>
+
+        <p class="alt-text">
+            ¿Ya tienes una cuenta?
+            <a href="login.php">Inicia sesión aquí</a>
+        </p>
+    </div>
+
+    <script>
+        /* ============================
+            FADE-IN DEL SONIDO
+        ============================= */
+        function fadeInAudio(audio, targetVolume = 0.30, duration = 3000) {
+            audio.volume = 0;
+            audio.play();
+
+            let step = targetVolume / (duration / 100);
+
+            let fade = setInterval(() => {
+                if (audio.volume < targetVolume) {
+                    audio.volume = Math.min(audio.volume + step, targetVolume);
+                } else {
+                    clearInterval(fade);
+                }
+            }, 100);
+        }
+
+        const audio = document.getElementById("ambient-sound");
+        fadeInAudio(audio);
+
+        /* ============================
+            SWITCH ANIMADO (THEME TOGGLE)
+        ============================ */
+        const toggle = document.getElementById("themeToggle");
+
+        // Aplicar estado guardado
+        if (localStorage.getItem("theme") === "dark") {
+            document.body.classList.add("dark-mode");
+            if (toggle) toggle.checked = true;
+        }
+
+        // Cambios en el switch
+        if (toggle) {
+            toggle.addEventListener("change", () => {
+                if (toggle.checked) {
+                    document.body.classList.add("dark-mode");
+                    localStorage.setItem("theme", "dark");
+                } else {
+                    document.body.classList.remove("dark-mode");
+                    localStorage.setItem("theme", "light");
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenStudio</title>
+    <link rel="stylesheet" href="CSS/style.css">
+
+    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- BOTÓN SONIDO -->
+    <button id="sound-btn" class="sound-btn">🔇</button>
+
+    <!-- BOTÓN MODO OSCURO (REEMPLAZADO) -->
+    <div class="toggle-container">
+        <input type="checkbox" id="themeToggle">
+        <label for="themeToggle" class="toggle">
+            <span class="sun"></span>
+            <span class="moon"></span>
+            <span class="stars"></span>
+            <span class="clouds"></span>
+        </label>
+    </div>
+
+    <!-- AUDIO -->
+    <audio id="ambient-sound" loop>
+        <source src="Sonido de la Naturaleza.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- HERO -->
+    <header class="hero">
+        <h1 class="title">ZenStudio</h1>
+        <p class="subtitle">Un refugio digital para tu mente</p>
+    </header>
+
+    <!-- SECCIONES -->
+    <section class="info-section hidden">
+        <h2>Visión</h2>
+        <p>
+            Ser la plataforma líder que proporcione un espacio digital de calma,
+            productividad y bienestar mental para estudiantes y profesionales.
+        </p>
+    </section>
+
+    <section class="info-section hidden">
+        <h2>Misión</h2>
+        <p>
+            Ofrecer ambientes personalizados con fondos, sonidos y elementos visuales que
+            favorezcan la concentración, reduzcan el estrés y mejoren el rendimiento académico
+            y laboral.
+        </p>
+    </section>
+
+    <section class="info-section hidden">
+        <h2>Valores</h2>
+        <ul>
+            <li>Bienestar y equilibrio</li>
+            <li>Productividad consciente</li>
+            <li>Creatividad y personalización</li>
+            <li>Experiencias digitales tranquilas</li>
+        </ul>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer hidden">
+        <button class="btn login" onclick="window.location.href='login.php'">Iniciar Sesión</button>
+        <button class="btn register" onclick="window.location.href='register.html'">Regístrate Aquí</button>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

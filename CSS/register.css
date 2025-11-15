@@ -1,0 +1,36 @@
+.form-container {
+    max-width: 450px;
+    margin: 120px auto;
+    padding: 45px;
+    background: var(--card-bg);
+    border-radius: 18px;
+    box-shadow: 0 10px 25px var(--card-shadow);
+    text-align: center;
+}
+
+form input {
+    width: 100%;
+    padding: 14px;
+    margin: 12px 0;
+    border-radius: 10px;
+    border: none;
+    background: var(--bg);
+    color: var(--text);
+    box-shadow: 0 5px 15px var(--card-shadow);
+}
+
+form button {
+    width: 100%;
+    margin-top: 15px;
+}
+
+.alt-text {
+    margin-top: 20px;
+    color: var(--subtext);
+}
+
+.alt-text a {
+    color: var(--text);
+    font-weight: 500;
+    text-decoration: underline;
+}
