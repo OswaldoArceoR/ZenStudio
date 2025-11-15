@@ -3,7 +3,7 @@
 $servername = "localhost";
 $usename = "root";
 $password = "";
-$database ="zenstudi"; //Nombre provisional xd
+$database ="zenstudio"; //Nombre provisional xd
 
 //mostrar errores de mysql
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -14,7 +14,7 @@ try {
     //lo mostramos en pantalla para nosotros, eliminar cuando se suba
     die("Error al conectar a la base de datos: " . $exception->getMessage());
 }
-
+// si ven esto, eliminen este comentario
 
 ?>
 
