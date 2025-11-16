@@ -17,20 +17,177 @@ form input {
     background: var(--bg);
     color: var(--text);
     box-shadow: 0 5px 15px var(--card-shadow);
+    box-sizing: border-box;
+}
+
+/* Contenedor para campos de contraseña */
+.password-container {
+    position: relative;
+    width: 100%;
+    margin: 12px 0;
+}
+
+.password-container input {
+    width: 100%;
+    padding-right: 45px;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+/* Icono del ojito */
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #666;
+    transition: color 0.3s ease;
+    background: none;
+    border: none;
+    padding: 5px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.toggle-password:hover {
+    color: #333;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.toggle-password:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+/* Estilos para modo oscuro */
+.dark-mode .toggle-password {
+    color: #ccc;
+}
+
+.dark-mode .toggle-password:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Asegurar que los iconos de Font Awesome se vean bien */
+.toggle-password i {
+    font-size: 14px;
+    transition: transform 0.2s ease;
+}
+
+/* Efecto sutil al hacer clic */
+.toggle-password:active i {
+    transform: scale(0.9);
 }
 
 form button {
     width: 100%;
     margin-top: 15px;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px var(--card-shadow);
+}
+
+form button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 20px var(--card-shadow);
+}
+
+form button:active {
+    transform: translateY(0);
 }
 
 .alt-text {
     margin-top: 20px;
     color: var(--subtext);
+    font-size: 14px;
 }
 
 .alt-text a {
     color: var(--text);
     font-weight: 500;
     text-decoration: underline;
+    transition: color 0.3s ease;
+}
+
+.alt-text a:hover {
+    color: var(--accent);
+}
+
+/* Estilos para los inputs normales (sin el ojito) */
+form input:not([type="password"]) {
+    padding: 14px;
+}
+
+/* Focus states para mejor accesibilidad */
+form input:focus {
+    outline: none;
+    box-shadow: 0 5px 15px var(--card-shadow), 0 0 0 2px var(--accent);
+}
+
+.password-container input:focus {
+    padding-right: 45px;
+}
+
+/* Responsive para register */
+@media (max-width: 480px) {
+    .form-container {
+        max-width: 100%;
+        margin: 80px 20px;
+        padding: 35px 25px;
+    }
+    
+    .password-container input {
+        padding-right: 40px;
+    }
+    
+    .toggle-password {
+        right: 10px;
+        width: 20px;
+        height: 20px;
+    }
+    
+    .toggle-password i {
+        font-size: 12px;
+    }
+}
+
+/* Estilos específicos para el formulario de registro con más campos */
+.form-container h2 {
+    margin-bottom: 25px;
+    color: var(--text);
+    font-weight: 500;
+}
+
+/* Asegurar que todos los inputs tengan la misma apariencia */
+form input::placeholder {
+    color: var(--subtext);
+    opacity: 0.7;
+}
+
+/* Mejor espaciado entre los campos del formulario de registro */
+form input {
+    margin: 10px 0;
+}
+
+/* Estilo para el botón de registro específico */
+.btn.register {
+    background: var(--accent);
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.btn.register:hover {
+    background: var(--accent-hover);
 }
