@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $_SESSION['user_id'] = $row['id'];
     $_SESSION['username'] = $row['username'];
 
-    header("Location: prueba/prueba.html");
+    header("Location: Prueba_PaginaPrincipal/paginaprincipal.html");
     exit();
 }
 ?>
