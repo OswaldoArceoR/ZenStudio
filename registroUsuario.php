@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once __DIR__ . '/INCLUDES/conection.php';
+require_once __DIR__ . '/INCLUDES/conexion.php';
 
 function post($k){ return isset($_POST[$k]) ? trim($_POST[$k]) : null; }
 

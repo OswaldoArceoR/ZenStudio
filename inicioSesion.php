@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once __DIR__ . '/INCLUDES/conection.php';
+require_once __DIR__ . '/INCLUDES/conexion.php';
 
 function post($k){ return isset($_POST[$k]) ? trim($_POST[$k]) : null; }
 
@@ -45,14 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verificar contraseña corrupta
     if (empty($row['contrasenia']) || strlen($row['contrasenia']) < 8) {
         $error = urlencode("La contraseña almacenada está corrupta. Vuelve a registrarte o solicita reinicio de contraseña.");
-        header("Location: login.php?error=$error");
+        header("Location: inicioSesion.php?error=$error");
         exit();
     }
 
     // Verificar contraseña correcta
     if (!password_verify($password, $row['contrasenia'])) {
         $error = urlencode("Contraseña incorrecta. Inténtalo de nuevo.");
-        header("Location: login.php?error=$error");
+        header("Location: inicioSesion.php?error=$error");
         exit();
     }
 
