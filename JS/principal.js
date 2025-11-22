@@ -137,8 +137,8 @@
 
     // ---------- Fondos Animados (Espacios) ----------
     const backgrounds = [
-        { id: 'hoguera', name: 'Hoguera Relajante', file: 'hogera.gif' },
-        { id: 'anime', name: 'Paisaje Anime', file: 'anime.gif' }
+        { id: 'hoguera', name: 'Hoguera Relajante', file: 'IMAGENES/hoguera.gif' },
+        { id: 'anime', name: 'Paisaje Anime', file: 'IMAGENES/anime.gif' }
     ];
 
     const backgroundGallery = $('#background-gallery');
@@ -381,6 +381,16 @@
         }
     });
 
+    const logoutLink = document.querySelector('.logout');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+                window.location.href = 'logout.php';
+            }
+        });
+    }
+
     // --- Credits Modal Logic ---
     const creditsModal = $('#credits-modal');
     const showCreditsBtn = $('#show-credits-btn');
@@ -488,8 +498,8 @@
 
     // ---------- Sounds (ambient) ----------
     const defaultSounds = [
-        { id: 'rain_thunder', name: 'Lluvia y Truenos', file: 'Sonidodelluvia.mp3' },
-        { id: 'ocean_relax', name: 'Océano Relajante', file: 'Sonidodeoceano.mp3' }
+        { id: 'rain_thunder', name: 'Lluvia y Truenos', file: 'SONIDOS/Sonidodelluvia.mp3' },
+        { id: 'ocean_relax', name: 'Océano Relajante', file: 'SONIDOS/Sonidodeoceano.mp3' }
     ];
     let userSounds = JSON.parse(localStorage.getItem(LS.USER_SOUNDS) || '[]');
     let soundsData = [...defaultSounds, ...userSounds];
@@ -1284,7 +1294,7 @@
 
         // 2.3. Negritas: **texto** -> <strong>texto</strong>
         // Se aplica DESPUÉS del manejo de listas, ya que las listas no deberían afectar esto.
-        html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</stro  ng>');
         
         // 2.4. Limpiar cualquier marcador EOL restante (Si una línea no fue lista, se mantiene el salto de línea)
         html = html.replace(/---EOL---/g, '<br>'); 

@@ -1,3 +1,18 @@
+<?php
+session_start();
+
+// Verificar si el usuario está logueado
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// Datos del usuario desde sesión
+$username = $_SESSION['username'];
+$nombre = $_SESSION['nombre'];
+$email = $_SESSION['email'];
+$avatar = $_SESSION['avatar'];
+?>
 <!DOCTYPE html>
 <html lang="es" data-theme="light">
 <head>
@@ -6,7 +21,7 @@
     <title>ZenFocus UI</title>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="CSS/principal.css">
 
 </head>
 <body>
@@ -85,18 +100,18 @@
 
             <div class="topbar-right">
                 <div class="user-avatar-container">
-                    <img src="https://via.placeholder.com/38" alt="Avatar" id="avatar-toggle" class="user-avatar" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false">
+                    <img src="<?php echo $avatar; ?>" alt="Avatar" id="avatar-toggle" class="user-avatar" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false">
                     <div class="focus-menu avatar-menu" id="avatar-menu" role="menu" aria-hidden="true">
                         <div class="avatar-menu-profile">
-                            <img src="https://via.placeholder.com/60" alt="Avatar de usuario" id="menu-avatar-img" class="menu-avatar">
+                            <img src="<?php echo $avatar; ?>" alt="Avatar de usuario" id="menu-avatar-img" class="menu-avatar">
                             <div class="menu-user-info">
-                                <span id="menu-account-name" class="menu-user-name">Usuario</span>
-                                <span id="menu-user-email" class="menu-user-email">email@ejemplo.com</span>
+                                <span id="menu-account-name" class="menu-user-name"><?php echo htmlspecialchars($username); ?></span>
+                                <span id="menu-user-email" class="menu-user-email"><?php echo htmlspecialchars($email); ?></span>
                             </div>
                         </div>
                         <div class="menu-separator"></div>
-                        <a role="menuitem" href="profile.html">Perfil/Ajustes Básicos</a>
-                        <a role="menuitem" href="#" class="logout">Cerrar Sesión</a>
+                        <a role="menuitem" href="perfil.php">Perfil/Ajustes Básicos</a>
+                        <a role="menuitem" href="cerrarSesion.php" class="cerrarSesion">Cerrar Sesión</a>
                     </div>
                 </div>
             </div>
@@ -380,10 +395,8 @@
                 <button id="clear-background-btn" class="action-btn secondary-btn">Quitar Fondo</button>
             </div>
         </section>
-
-
     </div>
 
-    <script src="app.js"></script>
+    <script src="JS/principal.js"></script>
 </body>
 </html>

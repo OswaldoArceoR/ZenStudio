@@ -1,64 +1,68 @@
 <?php
-require("conection.php");
+session_start();
+require_once __DIR__ . '/INCLUDES/conection.php';
 
-// Obtener datos del formulario
-$nombre = $_POST['nombre'];             
-$username = $_POST['username'];         // Nombre de usuario (para login)
-$email = $_POST['email'];
-$password = $_POST['password'];
-$confirm_password = $_POST['confirm_password'];
+function post($k){ return isset($_POST[$k]) ? trim($_POST[$k]) : null; }
 
-// Validar contraseña
-if ($password !== $confirm_password) {
-    header("Location: register.php?error=" . urlencode("Las contraseñas no coinciden."));
-    exit();
-}
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $nombre = post('nombre');
+    $username = post('username');
+    $email = post('email');
+    $password = post('password');
+    $confirm_password = post('confirm_password');
 
-// Validar que username no se duplique
-$stmt = $conexion->prepare("SELECT id FROM usuarios WHERE username = ? LIMIT 1");
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows > 0) {
-    header("Location: register.php?error=" . urlencode("El nombre de usuario ya está en uso."));
-    exit();
-}
-
-// Validar que email no haya sido usado
-$stmt = $conexion->prepare("SELECT id FROM usuarios WHERE email = ? LIMIT 1");
-$stmt->bind_param("s", $email);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows > 0) {
-    header("Location: register.php?error=" . urlencode("El correo ya está registrado."));
-    exit();
-}
-
-// Encriptacion de la contraseña
-$password_hash = password_hash($password, PASSWORD_DEFAULT);
-
-// Insertar usuario nuevo
-$stmt = $conexion->prepare(
-    "INSERT INTO usuarios (username, nombre, email, contrasenia)
-    VALUES (?, ?, ?, ?)"
-);
-
-if ($stmt) {
-    $stmt->bind_param("ssss", $username, $nombre, $email, $password_hash);
-    
-    if ($stmt->execute()) {
-        header("Location: login.php?success=" . urlencode("Cuenta creada correctamente. Ahora inicia sesión."));
+    // Validaciones básicas
+    if (!$nombre || !$username || !$email || !$password) {
+        $error = urlencode("Todos los campos son obligatorios");
+        header("Location: register.html?error=$error");
         exit();
-    } else {
-        echo "Error al registrar el usuario: " . $stmt->error;
     }
 
-    $stmt->close();
-} else {
-    echo "Error en la consulta: " . $conexion->error;
-}
+    if ($password !== $confirm_password) {
+        $error = urlencode("Las contraseñas no coinciden");
+        header("Location: register.html?error=$error");
+        exit();
+    }
 
-$conexion->close();
+    if (strlen($password) < 6) {
+        $error = urlencode("La contraseña debe tener al menos 6 caracteres");
+        header("Location: register.html?error=$error");
+        exit();
+    }
+
+    // Verificar si usuario o email ya existen
+    $stmt = $conexion->prepare('SELECT id FROM usuarios WHERE username = ? OR email = ?');
+    $stmt->bind_param('ss', $username, $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $error = urlencode("El usuario o email ya existen");
+        header("Location: register.html?error=$error");
+        exit();
+    }
+
+    // Hash de contraseña
+    $password_hash = password_hash($password, PASSWORD_DEFAULT);
+
+    // Insertar usuario
+    $stmt = $conexion->prepare('INSERT INTO usuarios (username, nombre, email, contrasenia) VALUES (?, ?, ?, ?)');
+    $stmt->bind_param('ssss', $username, $nombre, $email, $password_hash);
+
+    if ($stmt->execute()) {
+        // Login automático después del registro
+        $_SESSION['user_id'] = $stmt->insert_id;
+        $_SESSION['username'] = $username;
+        $_SESSION['nombre'] = $nombre;
+        $_SESSION['email'] = $email;
+        $_SESSION['avatar'] = 'https://ui-avatars.com/api/?name=' . urlencode($nombre) . '&background=5882FA&color=fff&size=128';
+        
+        header("Location: Prueba_PaginaPrincipal/paginaprincipal.php");
+        exit();
+    } else {
+        $error = urlencode("Error al crear la cuenta");
+        header("Location: register.html?error=$error");
+        exit();
+    }
+}
 ?>

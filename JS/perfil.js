@@ -32,14 +32,8 @@
 
     // --- Cargar datos del perfil ---
     function loadProfileData() {
-        const data = JSON.parse(localStorage.getItem(LS_PROFILE_KEY)) || {};
-
-        usernameInput.value = data.username || '';
-        accountNameInput.value = data.accountName || '';
-        emailInput.value = data.email || '';
-        if (data.avatar) {
-            avatarImg.src = data.avatar;
-        }
+        // Los datos ya vienen precargados desde PHP en los inputs
+        console.log('Datos del perfil cargados desde sesión PHP');
     }
 
     // --- Guardar datos del perfil ---
@@ -58,26 +52,27 @@
                 return;
             }
             // En una aplicación real, aquí se haría una llamada a un servidor.
-            // Por seguridad, no guardamos contraseñas en localStorage.
             alert('¡Contraseña actualizada con éxito! (Simulado)');
         }
 
-        // Guardar el resto de la información
+        // Guardar cambios en el perfil (simulado)
         const data = {
             username: usernameInput.value.trim(),
             accountName: accountNameInput.value.trim(),
             email: emailInput.value.trim(),
-            avatar: avatarImg.src.startsWith('data:image') ? avatarImg.src : null
+            avatar: avatarImg.src
         };
 
-        localStorage.setItem(LS_PROFILE_KEY, JSON.stringify(data));
+        // Aquí iría una llamada AJAX para actualizar en la base de datos
+        console.log('Datos a guardar:', data);
+        
+        // Simular guardado exitoso
+        alert('¡Perfil guardado con éxito! (Los cambios se reflejarán al recargar)');
 
         // Limpiar campos de contraseña
         currentPasswordInput.value = '';
         newPasswordInput.value = '';
         confirmPasswordInput.value = '';
-
-        alert('¡Perfil guardado con éxito!');
     }
 
     // --- Manejar subida de imagen ---
@@ -110,10 +105,4 @@
         applyTheme();
     });
 
-    // También actualiza el avatar en la página principal si se cambia
-    window.addEventListener('storage', (e) => {
-        if (e.key === LS_PROFILE_KEY) {
-            loadProfileData();
-        }
-    });
 })();

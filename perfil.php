@@ -1,3 +1,18 @@
+<?php
+session_start();
+
+// Verificar si el usuario está logueado
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// Datos del usuario desde sesión
+$username = $_SESSION['username'];
+$nombre = $_SESSION['nombre'];
+$email = $_SESSION['email'];
+$avatar = $_SESSION['avatar'];
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,10 +20,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ajustes de Perfil - ZenFocus</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
-    <!-- Reutilizamos los estilos base para mantener la coherencia -->
-    <link rel="stylesheet" href="styles.css">
-    <!-- Y añadimos estilos específicos para esta página -->
-    <link rel="stylesheet" href="profile.css">
+    <link rel="stylesheet" href="CSS/principal.css">
+    <link rel="stylesheet" href="CSS/perfil.css">
 </head>
 <body>
 
@@ -32,7 +45,7 @@
                         <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                     </svg>
                 </button>
-                <a href="paginaprincipal.html" class="back-link">
+                <a href="paginaprincipal.php" class="back-link">
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                     Volver
                 </a>
@@ -44,7 +57,7 @@
             <section class="profile-section">
                 <h2>Información Personal</h2>
                 <div class="avatar-editor">
-                    <img src="https://via.placeholder.com/100" alt="Avatar de usuario" id="profile-avatar-img" class="profile-avatar">
+                    <img src="<?php echo $avatar; ?>" alt="Avatar de usuario" id="profile-avatar-img" class="profile-avatar">
                     <label for="avatar-upload-input" class="avatar-upload-label">Cambiar foto</label>
                     <input type="file" id="avatar-upload-input" accept="image/*">
                 </div>
@@ -52,11 +65,11 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="username-input">Nombre de Usuario</label>
-                        <input type="text" id="username-input" placeholder="Ej: zen_master">
+                        <input type="text" id="username-input" value="<?php echo htmlspecialchars($username); ?>" placeholder="Ej: zen_master">
                     </div>
                     <div class="form-group">
                         <label for="accountname-input">Nombre de la Cuenta</label>
-                        <input type="text" id="accountname-input" placeholder="Ej: Alejandro">
+                        <input type="text" id="accountname-input" value="<?php echo htmlspecialchars($nombre); ?>" placeholder="Ej: Alejandro">
                     </div>
                 </div>
             </section>
@@ -67,7 +80,7 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="email-input">Correo Electrónico</label>
-                        <input type="email" id="email-input" placeholder="tu@correo.com">
+                        <input type="email" id="email-input" value="<?php echo htmlspecialchars($email); ?>" placeholder="tu@correo.com">
                     </div>
                 </div>
                 <div class="form-group">
@@ -93,6 +106,6 @@
         </main>
     </div>
 
-    <script src="profile.js"></script>
+    <script src="JS/perfil.js"></script>
 </body>
 </html>
