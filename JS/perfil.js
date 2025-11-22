@@ -2,7 +2,6 @@
     'use strict';
 
     // Claves para el LocalStorage
-    const LS_PROFILE_KEY = 'zen_profile_data';
     const LS_THEME = 'zen_theme';
 
     // Elementos del DOM
@@ -18,7 +17,7 @@
     const saveBtn = $('#save-profile-btn');
     const themeToggle = $('#theme-toggle');
 
-    // --- Cargar y aplicar el tema guardado ---
+    // --- Cargar y aplicar tema ---
     function applyTheme() {
         const savedTheme = localStorage.getItem(LS_THEME) || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
@@ -26,78 +25,105 @@
             themeToggle.setAttribute('aria-pressed', savedTheme === 'dark');
         }
     }
-
-    // Aplicar tema al cargar la página
     applyTheme();
 
-    // --- Cargar datos del perfil ---
+    // --- Datos del perfil ya vienen de PHP ---
     function loadProfileData() {
-        // Los datos ya vienen precargados desde PHP en los inputs
         console.log('Datos del perfil cargados desde sesión PHP');
     }
 
     // --- Guardar datos del perfil ---
     function saveProfileData() {
-        // Validar cambio de contraseña
-        const newPassword = newPasswordInput.value;
-        const confirmPassword = confirmPasswordInput.value;
 
-        if (newPassword || confirmPassword) {
+        const username = usernameInput.value.trim();
+        const nombre = accountNameInput.value.trim();
+        const email = emailInput.value.trim();
+        const currentPassword = currentPasswordInput.value.trim();
+        const newPassword = newPasswordInput.value.trim();
+        const confirmPassword = confirmPasswordInput.value.trim();
+
+        // === SOLUCIÓN 1 ===
+        const quiereCambiarPwd = newPassword !== '' || confirmPassword !== '';
+
+        // Si quiere cambiar contraseña → validar
+        if (quiereCambiarPwd) {
+
+            if (newPassword === '' || confirmPassword === '') {
+                alert("Debes llenar la nueva contraseña y su confirmación.");
+                return;
+            }
+
             if (newPassword.length < 6) {
-                alert('La nueva contraseña debe tener al menos 6 caracteres.');
+                alert("La nueva contraseña debe tener al menos 6 caracteres.");
                 return;
             }
+
             if (newPassword !== confirmPassword) {
-                alert('Las nuevas contraseñas no coinciden.');
+                alert("Las contraseñas nuevas no coinciden.");
                 return;
             }
-            // En una aplicación real, aquí se haría una llamada a un servidor.
-            alert('¡Contraseña actualizada con éxito! (Simulado)');
+
+            if (currentPassword === '') {
+                alert("Debes ingresar tu contraseña actual para autorizar el cambio.");
+                return;
+            }
         }
 
-        // Guardar cambios en el perfil (simulado)
-        const data = {
-            username: usernameInput.value.trim(),
-            accountName: accountNameInput.value.trim(),
-            email: emailInput.value.trim(),
-            avatar: avatarImg.src
+        // Construir payload EXACTO como lo pide el PHP
+        const payload = {
+            username,
+            nombre,
+            email,
+            currentPassword,
+            newPassword,
+            confirmPassword
         };
 
-        // Aquí iría una llamada AJAX para actualizar en la base de datos
-        console.log('Datos a guardar:', data);
-        
-        // Simular guardado exitoso
-        alert('¡Perfil guardado con éxito! (Los cambios se reflejarán al recargar)');
+        fetch("actualizarPerfil.php", {
+            method: "POST",
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
 
-        // Limpiar campos de contraseña
-        currentPasswordInput.value = '';
-        newPasswordInput.value = '';
-        confirmPasswordInput.value = '';
+            if (data.status === "error") {
+                alert(data.msg);
+                return;
+            }
+
+            alert("¡Perfil actualizado con éxito!");
+
+            // Limpiar campos de contraseña SIEMPRE
+            currentPasswordInput.value = "";
+            newPasswordInput.value = "";
+            confirmPasswordInput.value = "";
+        })
+        .catch(err => {
+            console.error("Error:", err);
+            alert("Ocurrió un error al actualizar el perfil.");
+        });
     }
 
-    // --- Manejar subida de imagen ---
+    // --- Subida de avatar ---
     function handleAvatarUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
 
-        // Validar que es una imagen
         if (!file.type.startsWith('image/')) {
-            alert('Por favor, selecciona un archivo de imagen.');
+            alert('Por favor selecciona una imagen válida.');
             return;
         }
 
         const reader = new FileReader();
-        reader.onload = (e) => {
-            // Mostrar la imagen previsualizada
-            avatarImg.src = e.target.result;
-        };
+        reader.onload = e => avatarImg.src = e.target.result;
         reader.readAsDataURL(file);
     }
 
-    // --- Asignar Event Listeners ---
+    // --- Listeners ---
     document.addEventListener('DOMContentLoaded', loadProfileData);
     saveBtn.addEventListener('click', saveProfileData);
     avatarUploadInput.addEventListener('change', handleAvatarUpload);
+
     themeToggle?.addEventListener('click', () => {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';

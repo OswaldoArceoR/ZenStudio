@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$user_or_email || !$password) {
         $error = urlencode("Usuario/correo y contraseña son obligatorios");
-        header("Location: login.php?error=$error");
+        header("Location: inicioSesion.php?error=$error");
         exit();
     }
 
@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$stmt) {
         $error = urlencode("Error en la consulta de la base de datos.");
-        header("Location: login.php?error=$error");
+        header("Location: inicioSesion.php?error=$error");
         exit();
     }
 
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($result->num_rows == 0) {
         $error = urlencode("Usuario o correo no encontrado.");
-        header("Location: login.php?error=$error");
+        header("Location: inicioSesion.php?error=$error");
         exit();
     }
 

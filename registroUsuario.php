@@ -14,19 +14,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validaciones básicas
     if (!$nombre || !$username || !$email || !$password) {
         $error = urlencode("Todos los campos son obligatorios");
-        header("Location: register.html?error=$error");
+        header("Location: registro.html?error=$error");
         exit();
     }
 
     if ($password !== $confirm_password) {
         $error = urlencode("Las contraseñas no coinciden");
-        header("Location: register.html?error=$error");
+        header("Location: registro.html?error=$error");
         exit();
     }
 
     if (strlen($password) < 6) {
         $error = urlencode("La contraseña debe tener al menos 6 caracteres");
-        header("Location: register.html?error=$error");
+        header("Location: registro.html?error=$error");
         exit();
     }
 
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($result->num_rows > 0) {
         $error = urlencode("El usuario o email ya existen");
-        header("Location: register.html?error=$error");
+        header("Location: registro.html?error=$error");
         exit();
     }
 
@@ -57,11 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['email'] = $email;
         $_SESSION['avatar'] = 'https://ui-avatars.com/api/?name=' . urlencode($nombre) . '&background=5882FA&color=fff&size=128';
         
-        header("Location: Prueba_PaginaPrincipal/paginaprincipal.php");
+        header("Location: paginaprincipal.php");
         exit();
     } else {
         $error = urlencode("Error al crear la cuenta");
-        header("Location: register.html?error=$error");
+        header("Location: registro.html?error=$error");
         exit();
     }
 }
