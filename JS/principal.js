@@ -1,3 +1,13 @@
+// Función para establecer cookies 
+function setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
 /* app.js - ZenFocus: código JS optimizado y modular (PRO + micro-interacciones) */
 (() => {
     'use strict';
@@ -96,6 +106,7 @@
             });
             panel.style.zIndex = maxZ + 1;
         }
+        saveOpenPanels(); 
     }
 
     // Sidebar click (delegated)
@@ -125,6 +136,7 @@
                 sideBtn.classList.remove('selected');
                 sideBtn.setAttribute('aria-pressed', 'false');
             }
+            saveOpenPanels();
         });
     });
 
@@ -338,11 +350,14 @@
     // ---------- Theme toggle ----------
     const themeToggle = $('#theme-toggle');
     themeToggle?.addEventListener('click', () => {
-        const current = body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        const current = document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
         const next = current === 'dark' ? 'light' : 'dark';
-        body.setAttribute('data-theme', next);
-        localStorage.setItem(LS.THEME, next);
+        document.body.setAttribute('data-theme', next);
+        document.documentElement.setAttribute('data-theme', next); // Aseguramos en HTML también
         
+        // 2.(Guardar la Cookie)
+        setCookie('zen_theme', next, 365);
+
         // La lógica de animación (rotación y cambio de icono) ahora es manejada por CSS.
         themeToggle.style.transition = 'none';
         setTimeout(() => themeToggle.style.transition = '', 50); 
@@ -574,6 +589,7 @@
 
         // Actualizamos la UI para reflejar el nuevo estado.
         updateSoundItemUI(id);
+        saveActiveSounds();
     }
 
     function createSoundItem(sound) {
@@ -1241,7 +1257,7 @@
         if (!str && str !== 0) return '';
         let html = String(str).trim();
         
-        // 1. Escapar caracteres HTML para evitar XSS
+        //  Escapar caracteres HTML para evitar XSS
         html = html
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -1249,13 +1265,13 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
             
-        // 2. Proceso de Formato Ligeros
+        //  Proceso de Formato Ligeros
         // NOTA: El orden de reemplazo es importante. Primero las listas, luego negritas, finalmente saltos de línea.
         
-        // 2.1. Reemplazar saltos de línea por un marcador temporal
+        //  Reemplazar saltos de línea por un marcador temporal
         html = html.replace(/\n/g, '---EOL---');
 
-        // 2.2. Manejo de Listas (- item o * item)
+        //  Manejo de Listas (- item o * item)
         // Buscamos líneas que empiezan con "---EOL---" seguido de cero o más espacios, y luego * o -
         html = html.replace(/(\s*---EOL---)(\s*)[*|-]\s*([^\-EOL]*)/g, '---EOL---<li>$3</li>');
 
@@ -1292,11 +1308,11 @@
         
         html = finalHtml;
 
-        // 2.3. Negritas: **texto** -> <strong>texto</strong>
+        //  Negritas: **texto** -> <strong>texto</strong>
         // Se aplica DESPUÉS del manejo de listas, ya que las listas no deberían afectar esto.
         html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</stro  ng>');
         
-        // 2.4. Limpiar cualquier marcador EOL restante (Si una línea no fue lista, se mantiene el salto de línea)
+        //  Limpiar cualquier marcador EOL restante (Si una línea no fue lista, se mantiene el salto de línea)
         html = html.replace(/---EOL---/g, '<br>'); 
         
         return html;
@@ -1326,5 +1342,75 @@
             });
     
         })();
+        //  Restaurar Ventanas que dejaste abiertas
+        restoreOpenPanels();    
+
+        //  Restaurar el Fondo de Pantalla
+        const savedBg = localStorage.getItem('zen_active_background'); // o LS.ACTIVE_BG
+        const bgContainer = document.getElementById('background-container');
+        if (savedBg && bgContainer) {
+            bgContainer.style.backgroundImage = `url(${savedBg})`;
+            document.body.style.backgroundImage = 'none';
+        }
+
+        //  Restaurar la música (con un pequeño retraso para que no falle)
+        setTimeout(() => {
+            restoreActiveSounds(); 
+        }, 500);
+
     });
+       // --- [INICIO] BLOQUE DE MEMORIA (PEGAR AL FINAL) ---
+
+    //  Guardar ventanas abiertas
+    function saveOpenPanels() {
+        const openIds = [];
+        // Busca todos los paneles que tengan la clase 'active'
+        document.querySelectorAll('.floating-panel.active').forEach(p => {
+            // Guarda el nombre (ej: calendar) quitando el prefijo 'content-'
+            openIds.push(p.id.replace('content-', ''));
+        });
+        localStorage.setItem('zen_open_panels', JSON.stringify(openIds));
+    }
+
+    //  Restaurar ventanas al entrar
+    function restoreOpenPanels() {
+        const openIds = JSON.parse(localStorage.getItem('zen_open_panels') || '[]');
+        openIds.forEach(section => {
+            const panel = document.getElementById('content-' + section);
+            // Si existe y no está abierto, simular click en el botón sidebar para abrirlo correctamente
+            if (panel && !panel.classList.contains('active')) {
+                const btn = document.querySelector(`.sidebar-btn[data-section="${section}"]`);
+                if(btn) btn.click(); 
+            }
+        });
+    }
+
+    //  Guardar sonidos activos
+    function saveActiveSounds() {
+        // activeAudios es tu variable original donde guardas los audios sonando
+        if(typeof activeAudios !== 'undefined') {
+            const activeIds = Object.keys(activeAudios);
+            localStorage.setItem('zen_active_sounds', JSON.stringify(activeIds));
+        }
+    }
+
+    //  Restaurar sonidos
+    function restoreActiveSounds() {
+        const activeIds = JSON.parse(localStorage.getItem('zen_active_sounds') || '[]');
+        // soundsData es tu variable original con la lista de sonidos
+        if(typeof soundsData !== 'undefined') {
+            activeIds.forEach(id => {
+                // Si el sonido ya está sonando, lo ignoramos
+                if (activeAudios && activeAudios[id]) return;
+
+                const sound = soundsData.find(s => s.id === id);
+                if (sound) {
+                    // Llamamos a tu función original toggleSound
+                    // Nota: Asegúrate que tu función toggleSound acepte estos 3 parámetros
+                    toggleSound(id, sound.name, sound.file);
+                }
+            });
+        }
+    }
+    // --- [FIN] BLOQUE DE MEMORIA ---
 })();
