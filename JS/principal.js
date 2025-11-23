@@ -37,7 +37,7 @@ function setCookie(name, value, days) {
         NOTES: 'zen_notes',
         POS: 'zen_panel_positions', 
         PROFILE: 'zen_profile_data',
-        SIZES: 'zen_panel_sizes', // Nueva clave para tamaños
+        SIZES: 'zen_panel_sizes',
         EVENTS: 'zen_events',
         USER_SOUNDS: 'zen_user_sounds',
         ACTIVE_BG: 'zen_active_background',
@@ -45,13 +45,13 @@ function setCookie(name, value, days) {
     };
 
     // In-memory state
-    let activeAudios = {}; // {id: {player:Audio, name, file}}
+    let activeAudios = {};
     let tasks = JSON.parse(localStorage.getItem(LS.TASKS) || 'null') || [{ text: "Crear estructura inicial del proyecto", completed: true }];
     let isMutedGlobally = false;
     let eventsByDate = JSON.parse(localStorage.getItem(LS.EVENTS) || '{}');
     let panelPositions = JSON.parse(localStorage.getItem(LS.POS) || '{}');
     let panelSizes = JSON.parse(localStorage.getItem(LS.SIZES) || '{}');
-    let pendingSoundFile = null; // Para guardar el archivo mientras se nombra
+    let pendingSoundFile = null;
 
     // Setup theme from localStorage
     (() => {
@@ -73,7 +73,13 @@ function setCookie(name, value, days) {
         const savedBg = localStorage.getItem(LS.ACTIVE_BG);
         const bgContainer = $('#background-container');
         if (savedBg && bgContainer) {
-            bgContainer.style.backgroundImage = `url(${savedBg})`;
+            try {
+                const bgData = JSON.parse(savedBg);
+                applyBackground(bgData.file, bgData.type);
+            } catch (e) {
+                // Fallback para versiones antiguas
+                bgContainer.style.backgroundImage = `url(${savedBg})`;
+            }
         }
     })();
 
@@ -147,55 +153,185 @@ function setCookie(name, value, days) {
         sessionStorage.setItem(LS.WELCOME_CLOSED, 'true');
     });
 
-    // ---------- Fondos Animados (Espacios) ----------
-    const backgrounds = [
-        { id: 'hoguera', name: 'Hoguera Relajante', file: 'IMAGENES/hoguera.gif' },
-        { id: 'anime', name: 'Paisaje Anime', file: 'IMAGENES/anime.gif' }
-    ];
+    // ---------- Fondos Animados (Desde Base de Datos) ----------
+    
 
-    const backgroundGallery = $('#background-gallery');
-    const clearBackgroundBtn = $('#clear-background-btn');
 
-    function renderBackgrounds() {
+function loadFondosGlobalBlobs() {
+  fetch('obtenerFondosGlobalBlobs.php')
+    .then(r => r.json())
+    .then(fondos => {
+      const gallery = document.querySelector('#background-gallery');
+      if (!gallery) return;
+
+      // Si quieres reemplazar lo anterior, descomenta:
+      // gallery.innerHTML = '';
+
+      fondos.forEach(f => {
+        const item = document.createElement('div');
+        item.className = 'background-item';
+        item.dataset.bgFile = f.url;    // URL de verBlobGlobal.php
+        item.dataset.bgType = f.mime;   // MIME
+
+        if (f.mime.startsWith('image/')) {
+          item.innerHTML = `
+            ${f.url}
+            <div class="background-name">${f.nombre}</div>
+          `;
+        } else if (f.mime.startsWith('video/')) {
+          item.innerHTML = `
+            <video muted loop autoplay playsinline>
+              ${f.url}
+            </video>
+            <div class="background-name">${f.nombre}</div>
+          `;
+        } else {
+          item.innerHTML = `<div class="background-name">${f.nombre}</div>`;
+        }
+
+        gallery.appendChild(item);
+      });
+
+      // Reusar tu lógica de click → applyBackground(...)
+      reassignBackgroundEvents();
+    })
+    .catch(err => console.error('Error BLOB fondos globales:', err));
+}
+
+
+function loadGlobalSoundsBlobs() {
+  fetch('obtenerSonidosGlobalBlobs.php')
+    .then(r => r.json())
+    .then(sonidos => {
+      const container = document.querySelector('#sound-list-container');
+      if (!container) return;
+
+      container.innerHTML = ''; // para ver solo los nuevos
+
+      sonidos.forEach(s => {
+        const row = document.createElement('div');
+        row.className = 'sound-item';
+        row.innerHTML = `
+          <div class="sound-info-group">
+            <button class="sound-toggle-btn" title="Play/Pause">▶</button>
+            <span>${s.nombre}</span>
+          </div>
+          <div class="volume-control-group">
+            <input class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.8">
+          </div>
+        `;
+
+        const btn = row.querySelector('.sound-toggle-btn');
+        const vol = row.querySelector('.volume-slider');
+
+        const audio = new Audio(s.url);  // BLOB servido por verBlobGlobal.php
+        audio.loop = true;
+        audio.volume = parseFloat(vol.value);
+
+        btn.addEventListener('click', () => {
+          if (audio.paused) {
+            audio.play().then(() => row.classList.add('playing'));
+          } else {
+            audio.pause();
+            row.classList.remove('playing');
+          }
+        });
+
+        vol.addEventListener('input', () => {
+          audio.volume = parseFloat(vol.value);
+        });
+
+        container.appendChild(row);
+      });
+    })
+    .catch(err => console.error('Error BLOB sonidos globales:', err));
+}
+
+
+
+    function renderDefaultBackgrounds() {
+        const backgroundGallery = $('#background-gallery');
         if (!backgroundGallery) return;
+        
+        const defaultFondos = [
+            { id: 'hoguera', name: 'Hoguera Relajante', file: 'IMAGENES/hoguera.gif' },
+            { id: 'anime', name: 'Paisaje Anime', file: 'IMAGENES/anime.gif' }
+        ];
+        
         backgroundGallery.innerHTML = '';
-        backgrounds.forEach(bg => {
+        defaultFondos.forEach(bg => {
             const item = document.createElement('div');
             item.className = 'background-item';
             item.dataset.bgFile = bg.file;
+            item.dataset.bgType = 'image/gif';
             item.innerHTML = `
                 <img src="${bg.file}" alt="${bg.name}" loading="lazy">
                 <div class="background-name">${bg.name}</div>
             `;
             backgroundGallery.appendChild(item);
         });
+        
+        reassignBackgroundEvents();
     }
 
-    backgroundGallery?.addEventListener('click', (e) => {
-        const item = e.target.closest('.background-item');
-        if (!item) return;
 
-        const bgFile = item.dataset.bgFile;
-        // Aplicamos el fondo al contenedor dedicado para no interferir con otros estilos del body
-        const bgContainer = $('#background-container');
-        if (bgContainer) bgContainer.style.backgroundImage = `url(${bgFile})`;
-        document.body.style.backgroundImage = 'none'; // Aseguramos que el body no tenga fondo
-        
-        localStorage.setItem(LS.ACTIVE_BG, bgFile);
+function reassignBackgroundEvents() {
+  const gallery = document.querySelector('#background-gallery');
+  if (!gallery) return;
+  gallery.addEventListener('click', (e) => {
+    const item = e.target.closest('.background-item');
+    if (!item) return;
+    const bgFile = item.dataset.bgFile;
+    const bgType = item.dataset.bgType || 'image/gif';
+    applyBackground(bgFile, bgType);
+    localStorage.setItem('zen_active_background', JSON.stringify({ file: bgFile, type: bgType }));
+    showPanel('spaces'); // si quieres cerrar el panel tras seleccionar
+  });
+}
 
-        // Opcional: cerrar el panel después de seleccionar
-        showPanel('spaces');
-    });
+    
+    function applyBackground(bgFile, bgType) {
+    const bgContainer = document.querySelector('#background-container');
+    if (!bgContainer) return;
 
+    bgContainer.innerHTML = '';
+    bgContainer.style.backgroundImage = 'none';
+
+    if (bgType.startsWith('image/')) {
+        bgContainer.style.backgroundImage = `url(${bgFile})`;
+        bgContainer.style.backgroundSize = 'cover';
+        bgContainer.style.backgroundPosition = 'center';
+        bgContainer.style.backgroundRepeat = 'no-repeat';
+    } else if (bgType.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.src = bgFile;
+        video.autoplay = true;
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        Object.assign(video.style, {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        position: 'absolute',
+        top: '0', left: '0', zIndex: '-1'
+        });
+        bgContainer.appendChild(video);
+    }
+    }
+
+
+    const clearBackgroundBtn = $('#clear-background-btn');
     clearBackgroundBtn?.addEventListener('click', () => {
         const bgContainer = $('#background-container');
-        if (bgContainer) bgContainer.style.backgroundImage = 'none';
-        document.body.style.backgroundImage = 'none'; // Limpiamos también el body por si acaso
+        if (bgContainer) {
+            bgContainer.style.backgroundImage = 'none';
+            bgContainer.innerHTML = '';
+        }
         localStorage.removeItem(LS.ACTIVE_BG);
     });
 
     // ---------- Drag / Pointer events for panels ----------
-    // Use pointerdown/move/up for robustness (mouse + touch + pen)
     function makeDraggable(panel) {
         const handle = panel.querySelector('.panel-handle');
         if (!handle) return;
@@ -219,7 +355,6 @@ function setCookie(name, value, days) {
         let origin = { x: 0, y: 0 };
 
         const onPointerDown = (ev) => {
-            // do not start dragging when clicking a control inside handle (like close button)
             if (ev.target.closest('button')) return;
 
             dragging = true;
@@ -233,10 +368,8 @@ function setCookie(name, value, days) {
             origin.x = rect.left;
             origin.y = rect.top;
 
-            // capture pointer to the panel to receive move/up even outside
             if (ev.pointerId) handle.setPointerCapture?.(ev.pointerId);
 
-            // bring to front
             let maxZ = 15;
             floatingPanels.forEach(p => {
                 const z = parseInt(p.style.zIndex) || 15;
@@ -250,7 +383,6 @@ function setCookie(name, value, days) {
             const dx = ev.clientX - start.x;
             const dy = ev.clientY - start.y;
 
-            // Keep within parent bounds
             const parentRect = panel.parentElement.getBoundingClientRect();
             const newLeft = clamp(origin.x + dx - parentRect.left, 0, parentRect.width - panel.offsetWidth);
             const newTop = clamp(origin.y + dy - parentRect.top, 0, parentRect.height - panel.offsetHeight);
@@ -265,13 +397,11 @@ function setCookie(name, value, days) {
             panel.classList.remove('dragging');
             panel.style.transition = '';
 
-            // save position
             const left = parseFloat(panel.style.left || 0);
             const top = parseFloat(panel.style.top || 0);
             panelPositions[panel.id] = { x: left, y: top };
             localStorage.setItem(LS.POS, JSON.stringify(panelPositions));
 
-            // release pointer capture
             if (ev.pointerId) handle.releasePointerCapture?.(ev.pointerId);
         };
 
@@ -284,8 +414,6 @@ function setCookie(name, value, days) {
 
     // ---------- Resize panels ----------
     function makeResizable(panel) {
-        // Hacemos que solo el panel de notas sea redimensionable.
-        // Si el panel no es el de notas, no continuamos.
         if (panel.id !== 'content-notes') return;
 
         const handle = panel.querySelector('.resize-handle');
@@ -296,7 +424,7 @@ function setCookie(name, value, days) {
         let startSize = { w: 0, h: 0 };
 
         const onPointerDown = (ev) => {
-            ev.stopPropagation(); // Evitar que se active el drag del panel
+            ev.stopPropagation();
             resizing = true;
             panel.classList.add('resizing');
             panel.style.transition = 'none';
@@ -316,7 +444,6 @@ function setCookie(name, value, days) {
             const dx = ev.clientX - start.x;
             const dy = ev.clientY - start.y;
 
-            // Usamos las constantes MIN_WIDTH y MIN_HEIGHT para mayor claridad.
             const MIN_WIDTH = 250;
             const MIN_HEIGHT = 150;
             const newWidth = clamp(startSize.w + dx, MIN_WIDTH, window.innerWidth - panel.offsetLeft);
@@ -332,7 +459,6 @@ function setCookie(name, value, days) {
             panel.classList.remove('resizing');
             panel.style.transition = '';
 
-            // Guardar el nuevo tamaño
             panelSizes[panel.id] = { w: panel.offsetWidth, h: panel.offsetHeight };
             localStorage.setItem(LS.SIZES, JSON.stringify(panelSizes));
 
@@ -344,7 +470,6 @@ function setCookie(name, value, days) {
         window.addEventListener('pointerup', onPointerUp);
     }
 
-    // Aplicamos la funcionalidad de redimensionar a todos los paneles flotantes.
     floatingPanels.forEach(makeResizable);
 
     // ---------- Theme toggle ----------
@@ -369,7 +494,6 @@ function setCookie(name, value, days) {
         avatarMenu.classList.toggle('open');
         avatarMenu.setAttribute('aria-hidden', String(!avatarMenu.classList.contains('open')));
         avatarToggle.setAttribute('aria-expanded', String(avatarMenu.classList.contains('open')));
-        // Close other dropdown
         zenstudioMenu.classList.remove('open');
     });
 
@@ -379,7 +503,6 @@ function setCookie(name, value, days) {
         zenstudioMenu.setAttribute('aria-hidden', String(!zenstudioMenu.classList.contains('open')));
         const expanded = zenstudioToggle.getAttribute('aria-expanded') === 'true';
         zenstudioToggle.setAttribute('aria-expanded', String(!expanded));
-        // Close other dropdown
         avatarMenu.classList.remove('open');
     });
 
@@ -401,7 +524,7 @@ function setCookie(name, value, days) {
         logoutLink.addEventListener('click', function(e) {
             e.preventDefault();
             if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-                window.location.href = 'logout.php';
+                window.location.href = 'cerrarSesion.php';
             }
         });
     }
@@ -415,7 +538,6 @@ function setCookie(name, value, days) {
         e.preventDefault();
         creditsModal?.classList.add('active');
         creditsModal?.setAttribute('aria-hidden', 'false');
-        // Close the dropdown it came from
         zenstudioMenu.classList.remove('open');
         zenstudioToggle.setAttribute('aria-expanded', 'false');
     });
@@ -476,9 +598,7 @@ function setCookie(name, value, days) {
             if (timeRemaining <= 0) {
                 stopTimerUI();
                 timerDisplay.textContent = '¡Hecho!';
-                // gentle notification
                 try { window.navigator.vibrate?.(200); } catch (e) {}
-                // small sound (if available) could be played here
                 alert('¡Tiempo de enfoque terminado!');
             }
         }, 1000);
@@ -516,6 +636,52 @@ function setCookie(name, value, days) {
         { id: 'rain_thunder', name: 'Lluvia y Truenos', file: 'SONIDOS/Sonidodelluvia.mp3' },
         { id: 'ocean_relax', name: 'Océano Relajante', file: 'SONIDOS/Sonidodeoceano.mp3' }
     ];
+
+    
+    
+
+    
+function loadFondosGlobalBlobs() {
+  fetch('obtenerFondosGlobalBlobs.php')
+    .then(r => r.json())
+    .then(fondos => {
+      const gallery = document.querySelector('#background-gallery');
+      if (!gallery) return;
+
+      gallery.innerHTML = ''; // para ver solo los nuevos
+
+      fondos.forEach(f => {
+        const item = document.createElement('div');
+        item.className = 'background-item';
+        item.dataset.bgFile = f.url;
+        item.dataset.bgType = f.mime;
+
+        if (f.mime.startsWith('image/')) {
+          item.innerHTML = `
+            ${f.url}
+            <div class="background-name">${f.nombre}</div>
+          `;
+        } else if (f.mime.startsWith('video/')) {
+          item.innerHTML = `
+            <video muted loop autoplay playsinline>
+              ${f.url}
+            </video>
+            <div class="background-name">${f.nombre}</div>
+          `;
+        }
+
+        gallery.appendChild(item);
+      });
+
+      // Tus eventos para click y aplicar fondo
+      reassignBackgroundEvents();
+    })
+    .catch(err => console.error('Error BLOB fondos globales:', err));
+}
+
+
+
+
     let userSounds = JSON.parse(localStorage.getItem(LS.USER_SOUNDS) || '[]');
     let soundsData = [...defaultSounds, ...userSounds];
 
@@ -526,21 +692,17 @@ function setCookie(name, value, days) {
     function setGlobalMute(muted) {
         isMutedGlobally = muted;
 
-        // Actualizar el botón de la barra superior
         if (soundIndicator) {
             soundIndicator.classList.toggle('muted', isMutedGlobally);
             soundIndicator.setAttribute('aria-pressed', String(isMutedGlobally));
         }
 
-        // Silenciar/desilenciar todos los audios de la página (ambientales, locales, etc.)
         $$('audio').forEach(audio => {
             audio.muted = isMutedGlobally;
         });
 
-        // Silenciar/desilenciar los sonidos de ambiente activos
         setAmbientSoundsMute(isMutedGlobally);
 
-        // Manejar el reproductor de YouTube si existe
         if (window.youtubePlayer && typeof window.youtubePlayer.mute === 'function') {
             if (isMutedGlobally) {
                 window.youtubePlayer.mute();
@@ -551,7 +713,6 @@ function setCookie(name, value, days) {
     }
 
     function setAmbientSoundsMute(muted) {
-        // Itera sobre los audios de ambiente activos y aplica el estado de silencio
         for (const soundId in activeAudios) {
             activeAudios[soundId].player.muted = muted;
         }
@@ -562,32 +723,27 @@ function setCookie(name, value, days) {
     });
 
     function toggleSound(id, name, file) {
-        // Si el audio no existe en nuestra lista de audios activos, lo creamos primero.
         if (!activeAudios[id]) {
             const audio = new Audio(encodeURI(file));
             audio.loop = true;
-            // Restaurar volumen si lo teníamos guardado, o poner uno por defecto
             const soundItemUI = soundListContainer.querySelector(`[data-sound-id="${id}"]`);
             const slider = soundItemUI?.querySelector('.volume-slider');
             audio.volume = slider ? parseFloat(slider.value) : 0.5;
 
             activeAudios[id] = { player: audio, name, file };
             
-            // Sincronizamos el estado de mute global al nuevo audio
             audio.muted = isMutedGlobally;
         }
 
         const soundInfo = activeAudios[id];
         const player = soundInfo.player;
 
-        // Ahora, simplemente alternamos entre play y pause.
         if (player.paused) {
             player.play().catch(e => console.error(`Error al reproducir ${name}:`, e));
         } else {
             player.pause();
         }
 
-        // Actualizamos la UI para reflejar el nuevo estado.
         updateSoundItemUI(id);
         saveActiveSounds();
     }
@@ -622,7 +778,6 @@ function setCookie(name, value, days) {
 
         container.appendChild(infoGroup);
 
-        // Creamos el control de volumen pero lo dejamos oculto por defecto
         const volGroup = document.createElement('div');
         volGroup.className = 'volume-control-group';
         volGroup.innerHTML = `
@@ -637,7 +792,6 @@ function setCookie(name, value, days) {
         });
         container.appendChild(volGroup);
         
-        // Asignamos un ID único al contenedor para poder encontrarlo después
         container.dataset.soundId = sound.id;
 
         return container;
@@ -666,7 +820,7 @@ function setCookie(name, value, days) {
     function renderSoundList() {
         if (!soundListContainer) return;
         soundListContainer.innerHTML = '';
-        soundsData = [...defaultSounds, ...userSounds]; // Actualizamos la lista combinada
+        soundsData = [...defaultSounds, ...userSounds];
         soundsData.forEach(s => soundListContainer.appendChild(createSoundItem(s)));
     }
 
@@ -695,7 +849,7 @@ function setCookie(name, value, days) {
                 const newSound = {
                     id: `user_${Date.now()}`,
                     name: soundName.trim(),
-                    file: event.target.result // Guardamos el audio como Data URL (base64)
+                    file: event.target.result
                 };
                 userSounds.push(newSound);
                 localStorage.setItem(LS.USER_SOUNDS, JSON.stringify(userSounds));
@@ -703,20 +857,18 @@ function setCookie(name, value, days) {
                 closeNameSoundModal();
             };
             reader.readAsDataURL(pendingSoundFile);
-            soundFileInput.value = ''; // Reset input para poder subir el mismo archivo de nuevo
+            soundFileInput.value = '';
         }
     }
 
     function deleteUserSound(soundId) {
         if (!confirm('¿Estás seguro de que quieres eliminar este sonido?')) return;
 
-        // Detener el sonido si está reproduciéndose
         if (activeAudios[soundId] && !activeAudios[soundId].player.paused) {
             toggleSound(soundId);
         }
         delete activeAudios[soundId];
 
-        // Eliminar de la lista y del localStorage
         userSounds = userSounds.filter(s => s.id !== soundId);
         localStorage.setItem(LS.USER_SOUNDS, JSON.stringify(userSounds));
         renderSoundList();
@@ -760,8 +912,6 @@ function setCookie(name, value, days) {
 
     closeNameSoundModalBtn?.addEventListener('click', closeNameSoundModal);
 
-    // ---------- Fin de la lógica de sonidos ----------
-
     // small SVG helpers
     function playSVG() {
         return '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
@@ -779,11 +929,9 @@ function setCookie(name, value, days) {
         tab.addEventListener('click', () => {
             const tabName = tab.dataset.tab;
 
-            // Actualizar botones de pestañas
             mediaTabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
 
-            // Actualizar contenido visible
             mediaTabContents.forEach(content => {
                 content.classList.toggle('active', content.id === `media-${tabName}-content`);
             });
@@ -803,7 +951,6 @@ function setCookie(name, value, days) {
     }
 
     function loadYoutubeVideo() {
-        // Destruir reproductor anterior si existe
         if (window.youtubePlayer) {
             window.youtubePlayer.destroy();
             window.youtubePlayer = null;
@@ -811,7 +958,6 @@ function setCookie(name, value, days) {
 
         const videoId = getYoutubeVideoId(youtubeUrlInput.value);
         if (videoId) {
-            // Limpiamos el contenedor y creamos un div para el nuevo reproductor
             youtubePlayerContainer.innerHTML = '<div id="youtube-player-div"></div>';
 
             window.youtubePlayer = new YT.Player('youtube-player-div', {
@@ -821,7 +967,6 @@ function setCookie(name, value, days) {
                 playerVars: { 'autoplay': 1, 'rel': 0, 'playsinline': 1 },
                 events: {
                     'onReady': (event) => {
-                        // Aplicar el estado de silencio global cuando el video esté listo
                         if (isMutedGlobally) {
                             event.target.mute();
                         }
@@ -854,7 +999,7 @@ function setCookie(name, value, days) {
         currentTrackIndex = index;
         const track = localPlaylistFiles[index];
         localPlayer.src = URL.createObjectURL(track);
-        localPlayer.muted = isMutedGlobally; // Aplicar estado de silencio
+        localPlayer.muted = isMutedGlobally;
         localPlayer.play();
         trackTitle.textContent = track.name.replace(/\.[^/.]+$/, "");
         playBtn.innerHTML = pauseSVG();
@@ -871,7 +1016,7 @@ function setCookie(name, value, days) {
                 playBtn.innerHTML = playSVG();
             }
         } else if (localPlaylistFiles.length > 0) {
-            playTrack(0); // Si no hay nada, empieza con la primera canción
+            playTrack(0);
         }
     }
 
@@ -960,7 +1105,7 @@ function setCookie(name, value, days) {
             if (checkbox.checked) {
                 const completeSound = new Audio('task-complete.mp3');
                 completeSound.volume = 0.3;
-                completeSound.muted = isMutedGlobally; // Respetar el silencio global
+                completeSound.muted = isMutedGlobally;
                 completeSound.play().catch(err => console.log("No se pudo reproducir sonido.", err));
             }
             renderTasks();
@@ -1026,21 +1171,17 @@ function setCookie(name, value, days) {
         const size = target.dataset.size;
         const text = target.textContent;
 
-        // Aplicar el comando de formato
         document.execCommand('fontSize', false, size);
         
-        // Actualizar UI del dropdown
         if (fontSizeCurrent) fontSizeCurrent.textContent = text;
         $$('.format-dropdown-item', fontSizeMenu).forEach(item => item.classList.remove('active'));
         target.classList.add('active');
 
-        // Cerrar menú y enfocar editor
         fontSizeMenu.classList.remove('open');
         fontSizeMenu.setAttribute('aria-hidden', 'true');
         quickNotes.focus();
     });
 
-    // Cerrar el dropdown si se hace clic fuera
     document.addEventListener('click', (e) => {
         if (!fontSizeMenu?.contains(e.target) && !fontSizeToggle?.contains(e.target)) {
             fontSizeMenu?.classList.remove('open');
@@ -1048,22 +1189,14 @@ function setCookie(name, value, days) {
     });
 
     if (quickNotes) {
-        // Load notes
         const savedNotes = localStorage.getItem(LS_NOTES_KEY) || '';
-        // Al cargar, ya no usamos escapeHtml, sino que insertamos el HTML guardado directamente.
-        // La sanitización se hará al guardar.
-        // Para mantener el formato, guardaremos el innerHTML.
         quickNotes.innerHTML = localStorage.getItem(LS_NOTES_KEY + '_html') || '';
 
-    
         let saveTimeout;
         quickNotes.addEventListener('input', (e) => {
-            // Para evitar guardar en cada pulsación, usamos un debounce
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
-                // Guardamos el contenido como texto plano para mantener los marcadores
-                // Y también el HTML para preservar el formato.
-                localStorage.setItem(LS_NOTES_KEY, quickNotes.innerText); // Para compatibilidad o búsqueda
+                localStorage.setItem(LS_NOTES_KEY, quickNotes.innerText);
                 localStorage.setItem(LS_NOTES_KEY + '_html', quickNotes.innerHTML);
             }, 300);
         });
@@ -1071,7 +1204,7 @@ function setCookie(name, value, days) {
         // Atajo de teclado para negrita
         quickNotes.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'b') {
-                e.preventDefault(); // Evitar la acción por defecto del navegador
+                e.preventDefault();
                 document.execCommand('bold');
             }
             if (e.ctrlKey && e.key === 'i') {
@@ -1083,10 +1216,7 @@ function setCookie(name, value, days) {
                 document.execCommand('underline');
             }
         });
-
-
     }
-    
 
     // ---------- Calendar ----------
     const calendarGrid = $('#calendar-grid');
@@ -1117,7 +1247,7 @@ function setCookie(name, value, days) {
         const month = date.getMonth();
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
-        const startWeekDay = firstDay.getDay(); // 0..6 (Sun..Sat)
+        const startWeekDay = firstDay.getDay();
         const totalDays = lastDay.getDate();
         const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -1128,7 +1258,6 @@ function setCookie(name, value, days) {
             calendarGrid.appendChild(el);
         });
 
-        // fill blanks
         for (let i = 0; i < startWeekDay; i++) {
             const blank = document.createElement('div');
             blank.className = 'day muted';
@@ -1136,7 +1265,6 @@ function setCookie(name, value, days) {
             calendarGrid.appendChild(blank);
         }
 
-        // days
         for (let d = 1; d <= totalDays; d++) {
             const el = document.createElement('div');
             el.className = 'day';
@@ -1152,7 +1280,6 @@ function setCookie(name, value, days) {
                 el.classList.add('current');
             }
 
-            // Al hacer clic en un día se abre el modal, reemplaza la función del botón eliminado
             el.addEventListener('click', () => openScheduleModal(dtKey)); 
             calendarGrid.appendChild(el);
         }
@@ -1177,7 +1304,6 @@ function setCookie(name, value, days) {
         events.forEach((event, index) => {
             const item = document.createElement('div');
             item.className = 'event-item';
-            // Usamos escapeHtml para sanear antes de insertar
             item.innerHTML = `<span>${escapeHtml(event)}</span> <button class="delete-event-btn secondary-btn" data-index="${index}" aria-label="Eliminar evento" style="padding: 5px 8px; font-size: 0.8rem;"> Eliminar </button>`;
             eventListEl.appendChild(item);
         });
@@ -1213,20 +1339,16 @@ function setCookie(name, value, days) {
         newEventText.value = '';
     }
 
-    // --- MANEJADORES DE EVENTOS CALENDARIO (CORREGIDOS) ---
-    
-    // Calendar Navigation
+    // --- MANEJADORES DE EVENTOS CALENDARIO ---
     prevMonthBtn?.addEventListener('click', () => navigateMonth(-1));
     nextMonthBtn?.addEventListener('click', () => navigateMonth(1));
 
-    // Add Event (Main Panel Button) - Ahora abre el modal para el día de hoy.
     addEventMainBtn?.addEventListener('click', () => { 
         const today = new Date();
         const dtKey = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
         openScheduleModal(dtKey);
     });
 
-    // Add Event (Modal Button)
     addEventModalBtn?.addEventListener('click', () => {
         const text = newEventText.value.trim();
         if (text && currentModalDateKey) {
@@ -1242,17 +1364,13 @@ function setCookie(name, value, days) {
         }
     });
 
-    // Close Modal Button
     closeModalBtn?.addEventListener('click', closeScheduleModal);
 
     newEventText?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') addEventModalBtn.click();
     });
 
-    // --- FIN MANEJADORES DE EVENTOS CALENDARIO (CORREGIDOS) ---
-
     // ---------- Utilities ----------
-    // MODIFICADA para soportar negritas y listas ligeras (Markdown)
     function escapeHtml(str) {
         if (!str && str !== 0) return '';
         let html = String(str).trim();
@@ -1274,11 +1392,8 @@ function setCookie(name, value, days) {
         //  Manejo de Listas (- item o * item)
         // Buscamos líneas que empiezan con "---EOL---" seguido de cero o más espacios, y luego * o -
         html = html.replace(/(\s*---EOL---)(\s*)[*|-]\s*([^\-EOL]*)/g, '---EOL---<li>$3</li>');
-
-        // Si la primera línea es un elemento de lista, añadir <li>
         html = html.replace(/^(\s*)[*|-]\s*([^\-EOL]*)/g, '<li>$2</li>');
         
-        // Envolver los bloques de <li> en <ul>
         let inList = false;
         const listRegex = /<li>.*?<\/li>/g;
         let finalHtml = '';
@@ -1288,25 +1403,20 @@ function setCookie(name, value, days) {
         while ((match = listRegex.exec(html)) !== null) {
             const preListContent = html.substring(lastIndex, match.index);
             if (inList) {
-                // Si la lista continua
                 finalHtml += match[0];
             } else {
-                // Si es el inicio de una lista
-                finalHtml += preListContent.replace(/---EOL---/g, '<br>'); // Renderizar contenido previo
+                finalHtml += preListContent.replace(/---EOL---/g, '<br>');
                 finalHtml += '<ul>' + match[0];
                 inList = true;
             }
             lastIndex = match.index + match[0].length;
         }
 
-        // Contenido después de la última lista
         const postListContent = html.substring(lastIndex);
         if (inList) {
-            finalHtml += '</ul>'; // Cerrar la última lista si la hubo
+            finalHtml += '</ul>';
         }
-        finalHtml += postListContent.replace(/---EOL---/g, '<br>'); // Renderizar el contenido final
-        
-        html = finalHtml;
+        finalHtml += postListContent.replace(/---EOL---/g, '<br>');
 
         //  Negritas: **texto** -> <strong>texto</strong>
         // Se aplica DESPUÉS del manejo de listas, ya que las listas no deberían afectar esto.
@@ -1323,9 +1433,10 @@ function setCookie(name, value, days) {
         (function init() {
             renderCalendar(calendarDate);
             renderSoundList();
-            renderBackgrounds(); // Añadido para poblar la galería de fondos
+            loadFondosGlobalBlobs();
+            loadGlobalSoundsBlobs();
             renderTasks();
-    
+
             // restore panel positions class/visibility from localStorage if any were active
             Object.keys(panelPositions).forEach(id => {
                 const p = document.getElementById(id);
@@ -1340,7 +1451,7 @@ function setCookie(name, value, days) {
                     p.style.height = `${size.h}px`;
                 }
             });
-    
+
         })();
         //  Restaurar Ventanas que dejaste abiertas
         restoreOpenPanels();    

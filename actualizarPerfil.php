@@ -100,7 +100,7 @@ if ($nueva_pwd === '' && $confirm_pwd === '') {
 
     // Todo OK -> hashear la nueva contraseña y actualizar 
     $passwordHash = password_hash($nueva_pwd, PASSWORD_BCRYPT);
-
+x
     $stmt_update = $conexion->prepare("UPDATE usuarios SET username = ?, nombre = ?, email = ?, contrasenia = ? WHERE id = ?");
     if (!$stmt_update) {
         echo json_encode(['status' => 'error', 'msg' => 'Error al preparar actualización con contraseña.']);
