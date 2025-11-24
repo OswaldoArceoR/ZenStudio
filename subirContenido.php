@@ -361,7 +361,7 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subir Contenido - ZenStudio</title>
-  <link rel="stylesheet" href="CSS.css">
+  <link rel="stylesheet" href="CSS/principal.css">
   <link rel="stylesheet" href="CSS/fondos.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
 
@@ -407,10 +407,8 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
       </div>
 
       <!-- Formulario Fondos → ahora guarda en BLOB por defecto -->
-      <form action="subirContenido.php" method="POST" enctype="multipart/form-data" value="fondos">
+      <form action="subirContenido.php" method="POST" enctype="multipart/form-data" class="upload-form active" id="form-fondos">
         <input type="hidden" name="tipo" value="fondos">
-        <!-- Opcional: si quieres forzar ruta alguna vez -->
-        <!-- <input type="hidden" name="modo" value="blob"> -->
         <div class="form-group">
           <label for="categoria-fondos">Categoría:</label>
           <select name="categoria" id="categoria-fondos" required class="form-select">
@@ -432,7 +430,8 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
       </form>
 
       <!-- Formulario Sonidos → ahora guarda en BLOB por defecto -->
-      <form action="subirContenido.php" method="POST" enctype="multipart/form-data" class="upload-form" id="form-sonidosidden" name="modo" value="blob"> -->
+      <form action="subirContenido.php" method="POST" enctype="multipart/form-data" class="upload-form" id="form-sonidos">
+        <input type="hidden" name="tipo" value="sonidos">
         <div class="form-group">
           <label for="categoria-sonidos">Categoría:</label>
           <select name="categoria" id="categoria-sonidos" required class="form-select">
