@@ -59,17 +59,17 @@ $avatar = $_SESSION['avatar'];
                 <div class="avatar-editor">
                     <img src="<?php echo $avatar; ?>" alt="Avatar de usuario" id="profile-avatar-img" class="profile-avatar">
                     <label for="avatar-upload-input" class="avatar-upload-label">Cambiar foto</label>
-                    <input type="file" id="avatar-upload-input" accept="image/*">
+                    <input type="file" id="avatar-upload-input" name="avatar-upload-input" accept="image/*">
                 </div>
 
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="username-input">Nombre de Usuario</label>
-                        <input type="text" id="username-input" value="<?php echo htmlspecialchars($username); ?>" placeholder="Ej: zen_master">
+                        <input type="text" id="username-input" name="username-input" value="<?php echo htmlspecialchars($username); ?>" placeholder="Ej: zen_master">
                     </div>
                     <div class="form-group">
                         <label for="accountname-input">Nombre de la Cuenta</label>
-                        <input type="text" id="accountname-input" value="<?php echo htmlspecialchars($nombre); ?>" placeholder="Ej: Alejandro">
+                        <input type="text" id="accountname-input" name="accountname-input" value="<?php echo htmlspecialchars($nombre); ?>" placeholder="Ej: Alejandro">
                     </div>
                 </div>
             </section>
@@ -80,21 +80,21 @@ $avatar = $_SESSION['avatar'];
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="email-input">Correo Electrónico</label>
-                        <input type="email" id="email-input" value="<?php echo htmlspecialchars($email); ?>" placeholder="tu@correo.com">
+                        <input type="email" id="email-input" name="email-input" value="<?php echo htmlspecialchars($email); ?>" placeholder="tu@correo.com">
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="current-password-input">Contraseña Actual</label>
-                    <input type="password" id="current-password-input" placeholder="••••••••">
+                    <input type="password" id="current-password-input" name="current-password-input" placeholder="••••••••">
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="new-password-input">Nueva Contraseña</label>
-                        <input type="password" id="new-password-input" placeholder="••••••••">
+                        <input type="password" id="new-password-input" name="new-password-input" placeholder="••••••••">
                     </div>
                     <div class="form-group">
                         <label for="confirm-password-input">Confirmar Nueva Contraseña</label>
-                        <input type="password" id="confirm-password-input" placeholder="••••••••">
+                        <input type="password" id="confirm-password-input" name="confirm-password-input" placeholder="••••••••">
                     </div>
                 </div>
             </section>

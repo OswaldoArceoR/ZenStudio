@@ -108,7 +108,7 @@ function procesarFondosBlob($categoria, $uploadedFiles, &$successCount, &$errorC
 
       // Validaciones
       if (!in_array($tipo_archivo, $allowedTypes)) {
-        $errors[] = "{$uploadedFiles['name'][$i]}: Tipo de archivo no permitido para fondos";
+        $errors[] = "{$uploadedFiles['name'][$i]}: Tipo de archivo no permitido para fondos (".$tipo_archivo.")";
         $errorCount++;
         continue;
       }
@@ -120,15 +120,20 @@ function procesarFondosBlob($categoria, $uploadedFiles, &$successCount, &$errorC
 
       // Leer contenido como BLOB
       $blob = @file_get_contents($tmp);
-      if ($blob === false) {
-        $errors[] = "{$uploadedFiles['name'][$i]}: No se pudo leer el archivo";
+      if ($blob === false || strlen($blob) === 0) {
+        $errors[] = "{$uploadedFiles['name'][$i]}: No se pudo leer el archivo o está vacío";
         $errorCount++;
         continue;
       }
 
-      // Bind (blob → 'b' y send_long_data)
-      // Orden: nombre(s), categoria(s), tipo_archivo(s), tamaño(i), mime_type(s), archivo_blob(b)
-      $blobParam = null; // placeholder para el 'b'
+      // Validar que el blob es realmente una imagen válida (opcional, solo para GIF)
+      if (strpos($tipo_archivo, 'image/') === 0 && substr($blob, 0, 6) !== 'GIF89a' && substr($blob, 0, 6) !== 'GIF87a') {
+        $errors[] = "{$uploadedFiles['name'][$i]}: El archivo no parece ser un GIF válido";
+        $errorCount++;
+        continue;
+      }
+
+      $blobParam = null;
       $stmt->bind_param('sssisb', $nombre, $categoria, $tipo_archivo, $tamaño, $tipo_archivo, $blobParam);
       $stmt->send_long_data(5, $blob);
 

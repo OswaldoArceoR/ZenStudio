@@ -18,7 +18,7 @@ $avatar = $_SESSION['avatar'];
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>ZenFocus UI</title>
+    <title>ZenStudio</title>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
     <link rel="stylesheet" href="CSS/principal.css">
@@ -117,7 +117,19 @@ $avatar = $_SESSION['avatar'];
             </div>
         </header>
 
+
         <main class="main-content" id="main-content">
+
+            <!-- Galería de Fondos Globales desde la base de datos -->
+            <section id="content-backgrounds" class="floating-panel" style="left: 350px; top: 100px; width: 420px;" aria-hidden="true">
+                <div class="panel-handle">
+                    <h2>Fondos Animados</h2>
+                    <button class="close-panel" data-target="backgrounds" aria-label="Cerrar fondos animados">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div id="fondos-list" class="fondos-list"></div>
+            </section>
 
             <!-- Mensaje de Bienvenida (diseño original con botón de cierre) -->
             <section id="welcome-message" aria-labelledby="welcome-title">
@@ -169,7 +181,7 @@ $avatar = $_SESSION['avatar'];
                 </div>
                 <div class="timer-config">
                     <label for="minutes-input">Minutos de Enfoque:</label>
-                    <input type="number" id="minutes-input" value="25" min="1" max="120" aria-label="Minutos de enfoque">
+                    <input type="number" id="minutes-input" name="minutes-input" value="25" min="1" max="120" aria-label="Minutos de enfoque">
                 </div>
                 <div id="timer-display" class="timer-display">25:00</div>
                 <div class="timer-actions">
@@ -194,7 +206,7 @@ $avatar = $_SESSION['avatar'];
                     </button>
                 </div>
                 <div class="task-input-group">
-                    <input type="text" id="new-task-input" placeholder="Añadir nueva tarea..." aria-label="Nueva tarea">
+                    <input type="text" id="new-task-input" name="new-task-input" placeholder="Añadir nueva tarea..." aria-label="Nueva tarea">
                     <button id="add-task-btn" class="action-btn primary-btn">Añadir</button>
                 </div>
                 <ul id="task-list" class="task-list">
@@ -263,7 +275,7 @@ $avatar = $_SESSION['avatar'];
                 <!-- Contenido de las pestañas -->
                 <div class="media-tab-content active" id="media-youtube-content">
                     <div class="media-url-input-group">
-                        <input type="text" id="youtube-url-input" placeholder="Pega una URL de YouTube aquí..." aria-label="URL de YouTube">
+                        <input type="text" id="youtube-url-input" name="youtube-url-input" placeholder="Pega una URL de YouTube aquí..." aria-label="URL de YouTube">
                         <button id="load-youtube-btn" class="action-btn primary-btn">Cargar</button>
                     </div>
                     <div id="youtube-player-container" class="youtube-player-container">
@@ -283,11 +295,11 @@ $avatar = $_SESSION['avatar'];
                         </div>
                         <div class="local-player-volume">
                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
-                            <input type="range" id="local-player-volume-slider" min="0" max="1" step="0.01" value="0.8">
+                            <input type="range" id="local-player-volume-slider" name="local-player-volume-slider" min="0" max="1" step="0.01" value="0.8">
                         </div>
                     </div>
                     <button id="upload-local-music-btn" class="action-btn secondary-btn" style="width: 100%; margin-top: 15px;">Subir Música</button>
-                    <input type="file" id="local-music-input" accept="audio/*" multiple style="display: none;">
+                    <input type="file" id="local-music-input" name="local-music-input" accept="audio/*" multiple style="display: none;">
                     <ul id="local-playlist" class="local-playlist"></ul>
                 </div>
             </section>
@@ -305,7 +317,7 @@ $avatar = $_SESSION['avatar'];
                 <button id="upload-sound-btn" class="action-btn secondary-btn" style="width: 100%; margin-top: 10px;">
                     Subir Sonido Propio
                 </button>
-                <input type="file" id="sound-file-input" style="display:none;" accept="audio/*">
+                <input type="file" id="sound-file-input" name="sound-file-input" style="display:none;" accept="audio/*">
             </section>
 
         </main>
@@ -322,7 +334,7 @@ $avatar = $_SESSION['avatar'];
                     <div id="event-list">
                         </div>
                     <div class="event-input-group" style="margin-top: 15px;">
-                        <input type="text" id="new-event-text" placeholder="Añadir nuevo evento (ej: Reunión 10:00)" aria-label="Nuevo evento">
+                        <input type="text" id="new-event-text" name="new-event-text" placeholder="Añadir nuevo evento (ej: Reunión 10:00)" aria-label="Nuevo evento">
                         <button id="add-event-modal-btn" class="action-btn primary-btn">Añadir</button>
                     </div>
                 </div>
@@ -369,7 +381,7 @@ $avatar = $_SESSION['avatar'];
                         <label for="new-sound-name-input">Nombre del Sonido</label>
                         <div class="input-with-icon">
                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2V15H6L11 19V5Z"></path></svg>
-                            <input type="text" id="new-sound-name-input" placeholder="Ej: Lluvia en el bosque" aria-label="Nombre del nuevo sonido">
+                            <input type="text" id="new-sound-name-input" name="new-sound-name-input" placeholder="Ej: Lluvia en el bosque" aria-label="Nombre del nuevo sonido">
                         </div>
                     </div>
                     <div class="modal-actions">

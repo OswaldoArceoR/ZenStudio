@@ -153,171 +153,198 @@ function setCookie(name, value, days) {
         sessionStorage.setItem(LS.WELCOME_CLOSED, 'true');
     });
 
-    // ---------- Fondos Animados (Desde Base de Datos) ----------
-    
 
 
-function loadFondosGlobalBlobs() {
-  fetch('obtenerFondosGlobalBlobs.php')
-    .then(r => r.json())
-    .then(fondos => {
-      const gallery = document.querySelector('#background-gallery');
-      if (!gallery) return;
+    // ---------- Fondos Animados (Desde Base de Datos, solo background-gallery) ----------
+    function loadFondosGlobalBlobs() {
+      fetch('obtenerFondosGlobalBlobs.php')
+        .then(r => r.json())
+        .then(fondos => {
+          const gallery = document.querySelector('#background-gallery');
+          if (!gallery) return;
 
-      // Si quieres reemplazar lo anterior, descomenta:
-      // gallery.innerHTML = '';
+                gallery.innerHTML = '';
+                if (!Array.isArray(fondos) || fondos.length === 0) {
+                    gallery.innerHTML = '<div style="color:red;text-align:center;padding:1em;">No hay fondos globales disponibles en la base de datos.</div>';
+                    console.warn('Fondos globales vacíos:', fondos);
+                    return;
+                }
 
-      fondos.forEach(f => {
-        const item = document.createElement('div');
-        item.className = 'background-item';
-        item.dataset.bgFile = f.url;    // URL de verBlobGlobal.php
-        item.dataset.bgType = f.mime;   // MIME
+                fondos.forEach(f => {
+                    const item = document.createElement('div');
+                    item.className = 'background-item';
+                    // fallback MIME si no existe
+                    const mime = f.mime || 'image/gif';
+                    item.dataset.bgFile = f.url;
+                    item.dataset.bgType = mime;
 
-        if (f.mime.startsWith('image/')) {
-          item.innerHTML = `
-            ${f.url}
-            <div class="background-name">${f.nombre}</div>
-          `;
-        } else if (f.mime.startsWith('video/')) {
-          item.innerHTML = `
-            <video muted loop autoplay playsinline>
-              ${f.url}
-            </video>
-            <div class="background-name">${f.nombre}</div>
-          `;
-        } else {
-          item.innerHTML = `<div class="background-name">${f.nombre}</div>`;
-        }
+                    // Crear elemento multimedia según MIME
+                    if (mime.startsWith('image/')) {
+                        const img = document.createElement('img');
+                        img.src = f.url;
+                        img.alt = f.nombre || '';
+                        img.loading = 'lazy';
+                        item.appendChild(img);
+                    } else if (mime.startsWith('video/')) {
+                        const video = document.createElement('video');
+                        video.src = f.url;
+                        video.muted = true;
+                        video.loop = true;
+                        video.autoplay = true;
+                        video.playsInline = true;
+                        item.appendChild(video);
+                    } else {
+                        item.innerHTML = '<div style="color:gray;">Tipo no soportado: ' + mime + '</div>';
+                    }
 
-        gallery.appendChild(item);
-      });
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'background-name';
+                    nameDiv.textContent = f.nombre || '';
+                    item.appendChild(nameDiv);
 
-      // Reusar tu lógica de click → applyBackground(...)
-      reassignBackgroundEvents();
-    })
-    .catch(err => console.error('Error BLOB fondos globales:', err));
-}
+                    gallery.appendChild(item);
+                });
+
+                // Reasignar eventos para permitir aplicar el fondo seleccionado
+                reassignBackgroundEvents();
+        })
+            .catch(err => {
+                const gallery = document.querySelector('#background-gallery');
+                if (gallery) {
+                    gallery.innerHTML = '<div style="color:red;text-align:center;padding:1em;">Error al cargar los fondos globales.</div>';
+                }
+                console.error('Error BLOB fondos globales:', err);
+            });
+    }
+
+    // Asignar eventos para seleccionar fondo desde la galería principal
+    function reassignBackgroundEvents() {
+        const gallery = document.querySelector('#background-gallery');
+        if (!gallery) return;
+        gallery.addEventListener('click', (e) => {
+            const item = e.target.closest('.background-item');
+            if (!item) return;
+            const bgFile = item.dataset.bgFile;
+            const bgType = item.dataset.bgType || 'image/gif';
+            console.log('[FONDO] Click fondo:', { bgFile, bgType, item });
+            if (!bgFile) {
+                alert('No se encontró la URL del fondo (bgFile)');
+                return;
+            }
+            if (!bgType) {
+                alert('No se encontró el tipo MIME del fondo (bgType)');
+                return;
+            }
+            applyBackground(bgFile, bgType);
+            localStorage.setItem('zen_active_background', JSON.stringify({ file: bgFile, type: bgType }));
+        });
+    }
+
+    // Cargar fondos al iniciar
+    document.addEventListener('DOMContentLoaded', function() {
+        loadFondosGlobalBlobs();
+    });
+
 
 
 function loadGlobalSoundsBlobs() {
-  fetch('obtenerSonidosGlobalBlobs.php')
-    .then(r => r.json())
-    .then(sonidos => {
-      const container = document.querySelector('#sound-list-container');
-      if (!container) return;
-
-      container.innerHTML = ''; // para ver solo los nuevos
-
-      sonidos.forEach(s => {
-        const row = document.createElement('div');
-        row.className = 'sound-item';
-        row.innerHTML = `
-          <div class="sound-info-group">
-            <button class="sound-toggle-btn" title="Play/Pause">▶</button>
-            <span>${s.nombre}</span>
-          </div>
-          <div class="volume-control-group">
-            <input class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.8">
-          </div>
-        `;
-
-        const btn = row.querySelector('.sound-toggle-btn');
-        const vol = row.querySelector('.volume-slider');
-
-        const audio = new Audio(s.url);  // BLOB servido por verBlobGlobal.php
-        audio.loop = true;
-        audio.volume = parseFloat(vol.value);
-
-        btn.addEventListener('click', () => {
-          if (audio.paused) {
-            audio.play().then(() => row.classList.add('playing'));
-          } else {
-            audio.pause();
-            row.classList.remove('playing');
-          }
-        });
-
-        vol.addEventListener('input', () => {
-          audio.volume = parseFloat(vol.value);
-        });
-
-        container.appendChild(row);
-      });
-    })
-    .catch(err => console.error('Error BLOB sonidos globales:', err));
+    fetch('obtenerSonidosGlobalBlobs.php')
+        .then(r => r.json())
+        .then(sonidos => {
+            // Mapear los sonidos globales a formato compatible con createSoundItem
+            // id, name, file
+            const globalSounds = Array.isArray(sonidos) ? sonidos.map(s => ({
+                id: 'global_' + s.id,
+                name: s.nombre,
+                file: s.url
+            })) : [];
+            // Actualizar la lista de sonidos globales
+            window.globalSoundsData = globalSounds;
+            // Unir con sonidos de usuario
+            soundsData = [...globalSounds, ...userSounds];
+            renderSoundList();
+        })
+        .catch(err => console.error('Error BLOB sonidos globales:', err));
 }
 
 
 
-    function renderDefaultBackgrounds() {
-        const backgroundGallery = $('#background-gallery');
-        if (!backgroundGallery) return;
-        
-        const defaultFondos = [
-            { id: 'hoguera', name: 'Hoguera Relajante', file: 'IMAGENES/hoguera.gif' },
-            { id: 'anime', name: 'Paisaje Anime', file: 'IMAGENES/anime.gif' }
-        ];
-        
-        backgroundGallery.innerHTML = '';
-        defaultFondos.forEach(bg => {
-            const item = document.createElement('div');
-            item.className = 'background-item';
-            item.dataset.bgFile = bg.file;
-            item.dataset.bgType = 'image/gif';
-            item.innerHTML = `
-                <img src="${bg.file}" alt="${bg.name}" loading="lazy">
-                <div class="background-name">${bg.name}</div>
-            `;
-            backgroundGallery.appendChild(item);
-        });
-        
-        reassignBackgroundEvents();
-    }
 
 
 function reassignBackgroundEvents() {
-  const gallery = document.querySelector('#background-gallery');
-  if (!gallery) return;
-  gallery.addEventListener('click', (e) => {
-    const item = e.target.closest('.background-item');
-    if (!item) return;
-    const bgFile = item.dataset.bgFile;
-    const bgType = item.dataset.bgType || 'image/gif';
-    applyBackground(bgFile, bgType);
-    localStorage.setItem('zen_active_background', JSON.stringify({ file: bgFile, type: bgType }));
-    showPanel('spaces'); // si quieres cerrar el panel tras seleccionar
-  });
+    const gallery = document.querySelector('#background-gallery');
+    if (!gallery) return;
+    gallery.addEventListener('click', (e) => {
+        const item = e.target.closest('.background-item');
+        if (!item) return;
+        const bgFile = item.dataset.bgFile;
+        const bgType = item.dataset.bgType || 'image/gif';
+        console.log('[FONDO] Click fondo:', { bgFile, bgType, item });
+        if (!bgFile) {
+            alert('No se encontró la URL del fondo (bgFile)');
+            return;
+        }
+        if (!bgType) {
+            alert('No se encontró el tipo MIME del fondo (bgType)');
+            return;
+        }
+        applyBackground(bgFile, bgType);
+        localStorage.setItem('zen_active_background', JSON.stringify({ file: bgFile, type: bgType }));
+        // showPanel('spaces'); // si quieres cerrar el panel tras seleccionar
+    });
 }
 
     
     function applyBackground(bgFile, bgType) {
-    const bgContainer = document.querySelector('#background-container');
-    if (!bgContainer) return;
+        const bgContainer = document.querySelector('#background-container');
+        if (!bgContainer) return;
 
-    bgContainer.innerHTML = '';
-    bgContainer.style.backgroundImage = 'none';
+        bgContainer.innerHTML = '';
+        bgContainer.style.backgroundImage = 'none';
 
-    if (bgType.startsWith('image/')) {
-        bgContainer.style.backgroundImage = `url(${bgFile})`;
-        bgContainer.style.backgroundSize = 'cover';
-        bgContainer.style.backgroundPosition = 'center';
-        bgContainer.style.backgroundRepeat = 'no-repeat';
-    } else if (bgType.startsWith('video/')) {
-        const video = document.createElement('video');
-        video.src = bgFile;
-        video.autoplay = true;
-        video.muted = true;
-        video.loop = true;
-        video.playsInline = true;
-        Object.assign(video.style, {
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover',
-        position: 'absolute',
-        top: '0', left: '0', zIndex: '-1'
-        });
-        bgContainer.appendChild(video);
-    }
+        if (typeof bgType !== 'string') {
+            console.error('Tipo de fondo no definido:', bgType);
+            bgContainer.innerHTML = '<div style="color:red;text-align:center;">Tipo de fondo no definido</div>';
+            return;
+        }
+
+        if (bgType.startsWith('image/')) {
+            // Imagen (incluye GIF, PNG, JPG, etc)
+            const img = document.createElement('img');
+            img.src = bgFile;
+            img.alt = 'Fondo';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.onerror = function() {
+                bgContainer.innerHTML = '<div style="color:red;text-align:center;">No se pudo cargar la imagen del fondo.</div>';
+                console.error('No se pudo cargar la imagen:', bgFile);
+            };
+            bgContainer.appendChild(img);
+        } else if (bgType.startsWith('video/')) {
+            // Video
+            const video = document.createElement('video');
+            video.src = bgFile;
+            video.autoplay = true;
+            video.muted = true;
+            video.loop = true;
+            video.playsInline = true;
+            Object.assign(video.style, {
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                position: 'absolute',
+                top: '0', left: '0', zIndex: '-1'
+            });
+            video.onerror = function() {
+                bgContainer.innerHTML = '<div style="color:red;text-align:center;">No se pudo cargar el video del fondo.</div>';
+                console.error('No se pudo cargar el video:', bgFile);
+            };
+            bgContainer.appendChild(video);
+        } else {
+            bgContainer.innerHTML = '<div style="color:red;text-align:center;">Tipo de fondo no soportado: ' + bgType + '</div>';
+            console.warn('Tipo de fondo no soportado:', bgType, bgFile);
+        }
     }
 
 
@@ -632,10 +659,9 @@ function reassignBackgroundEvents() {
     updateTimerDisplay();
 
     // ---------- Sounds (ambient) ----------
-    const defaultSounds = [
-        { id: 'rain_thunder', name: 'Lluvia y Truenos', file: 'SONIDOS/Sonidodelluvia.mp3' },
-        { id: 'ocean_relax', name: 'Océano Relajante', file: 'SONIDOS/Sonidodeoceano.mp3' }
-    ];
+
+    // Los sonidos globales ahora se cargan solo desde la base de datos (no desde SONIDOS/ locales)
+    const defaultSounds = [];
 
     
     
@@ -648,46 +674,77 @@ function loadFondosGlobalBlobs() {
       const gallery = document.querySelector('#background-gallery');
       if (!gallery) return;
 
-      gallery.innerHTML = ''; // para ver solo los nuevos
+            gallery.innerHTML = '';
+            if (!Array.isArray(fondos) || fondos.length === 0) {
+                gallery.innerHTML = '<div style="color:red;text-align:center;padding:1em;">No hay fondos globales disponibles en la base de datos.</div>';
+                console.warn('Fondos globales vacíos:', fondos);
+                return;
+            }
 
-      fondos.forEach(f => {
-        const item = document.createElement('div');
-        item.className = 'background-item';
-        item.dataset.bgFile = f.url;
-        item.dataset.bgType = f.mime;
+            fondos.forEach(f => {
+                const item = document.createElement('div');
+                item.className = 'background-item';
+                // fallback MIME si no existe
+                const mime = f.mime || 'image/gif';
+                item.dataset.bgFile = f.url;
+                item.dataset.bgType = mime;
 
-        if (f.mime.startsWith('image/')) {
-          item.innerHTML = `
-            ${f.url}
-            <div class="background-name">${f.nombre}</div>
-          `;
-        } else if (f.mime.startsWith('video/')) {
-          item.innerHTML = `
-            <video muted loop autoplay playsinline>
-              ${f.url}
-            </video>
-            <div class="background-name">${f.nombre}</div>
-          `;
-        }
+                // Crear elemento multimedia según MIME
+                if (mime.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = f.url;
+                    img.alt = f.nombre || '';
+                    img.loading = 'lazy';
+                    item.appendChild(img);
+                } else if (mime.startsWith('video/')) {
+                    const video = document.createElement('video');
+                    video.src = f.url;
+                    video.muted = true;
+                    video.loop = true;
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    item.appendChild(video);
+                } else {
+                    item.innerHTML = '<div style="color:gray;">Tipo no soportado: ' + mime + '</div>';
+                }
 
-        gallery.appendChild(item);
-      });
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'background-name';
+                nameDiv.textContent = f.nombre || '';
+                item.appendChild(nameDiv);
 
-      // Tus eventos para click y aplicar fondo
-      reassignBackgroundEvents();
+                gallery.appendChild(item);
+            });
+
+            // Reasignar eventos para permitir aplicar el fondo seleccionado
+            reassignBackgroundEvents();
     })
-    .catch(err => console.error('Error BLOB fondos globales:', err));
+        .catch(err => {
+            const gallery = document.querySelector('#background-gallery');
+            if (gallery) {
+                gallery.innerHTML = '<div style="color:red;text-align:center;padding:1em;">Error al cargar los fondos globales.</div>';
+            }
+            console.error('Error BLOB fondos globales:', err);
+        });
 }
 
 
 
 
+
+
     let userSounds = JSON.parse(localStorage.getItem(LS.USER_SOUNDS) || '[]');
-    let soundsData = [...defaultSounds, ...userSounds];
+    let soundsData = []; // Se llenará dinámicamente con globales + usuario
+
 
     const soundListContainer = $('#sound-list-container');
     const uploadSoundBtn = $('#upload-sound-btn');
     const soundFileInput = $('#sound-file-input');
+
+    // --- Cargar sonidos globales desde la base de datos al iniciar ---
+    document.addEventListener('DOMContentLoaded', function() {
+        loadGlobalSoundsBlobs();
+    });
 
     function setGlobalMute(muted) {
         isMutedGlobally = muted;
@@ -723,25 +780,38 @@ function loadFondosGlobalBlobs() {
     });
 
     function toggleSound(id, name, file) {
+        // Si ya existe, usar la misma instancia
         if (!activeAudios[id]) {
-            const audio = new Audio(encodeURI(file));
-            audio.loop = true;
+            // Si existe un audio previo con ese id, pausarlo y eliminarlo
+            if (activeAudios[id] && activeAudios[id].player) {
+                try { activeAudios[id].player.pause(); } catch(e){}
+                delete activeAudios[id];
+            }
+            // Crear solo una instancia Audio por sonido
+            const audio = new Audio(file);
+            audio.loop = false; // No loop por defecto
             const soundItemUI = soundListContainer.querySelector(`[data-sound-id="${id}"]`);
             const slider = soundItemUI?.querySelector('.volume-slider');
             audio.volume = slider ? parseFloat(slider.value) : 0.5;
-
-            activeAudios[id] = { player: audio, name, file };
-            
             audio.muted = isMutedGlobally;
+            activeAudios[id] = { player: audio, name, file };
         }
 
         const soundInfo = activeAudios[id];
         const player = soundInfo.player;
 
         if (player.paused) {
-            player.play().catch(e => console.error(`Error al reproducir ${name}:`, e));
+            player.loop = true; // Solo hacer loop cuando el usuario da play
+            player.play().catch(e => {
+                // Si es NotSupportedError, limpiar la instancia
+                if (e.name === 'NotSupportedError') {
+                    delete activeAudios[id];
+                }
+                console.error(`Error al reproducir ${name}:`, e);
+            });
         } else {
             player.pause();
+            player.loop = false;
         }
 
         updateSoundItemUI(id);
@@ -820,7 +890,7 @@ function loadFondosGlobalBlobs() {
     function renderSoundList() {
         if (!soundListContainer) return;
         soundListContainer.innerHTML = '';
-        soundsData = [...defaultSounds, ...userSounds];
+        // soundsData ya contiene globales + usuario
         soundsData.forEach(s => soundListContainer.appendChild(createSoundItem(s)));
     }
 
@@ -1433,7 +1503,7 @@ function loadFondosGlobalBlobs() {
         (function init() {
             renderCalendar(calendarDate);
             renderSoundList();
-            loadFondosGlobalBlobs();
+            loadFondosGlobalBlobs(); // Solo cargar desde base de datos
             loadGlobalSoundsBlobs();
             renderTasks();
 
