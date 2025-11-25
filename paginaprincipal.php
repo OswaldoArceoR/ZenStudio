@@ -324,8 +324,10 @@ $avatar = $_SESSION['avatar'];
                 <div id="user-sounds-section" style="display:none; margin-top:12px;">
                     <h3 style="margin:4px 0;">Mis Sonidos Subidos</h3>
                     <button id="refresh-user-sounds-btn" class="action-btn tertiary-btn" style="width:100%; margin-bottom:8px;">Actualizar Lista</button>
-                    <div id="user-sound-list" class="sound-list"></div>
-
+                    <div id="user-sound-list" class="sound-list">
+                </div>
+                <button id="delete-user-sound-btn" class="action-btn secondary-btn" style="width:100%; margin-top:8px;" disabled>Eliminar Sonido Usuario</button>
+            </section>
         </main>
 
         <div id="schedule-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true">
@@ -400,6 +402,7 @@ $avatar = $_SESSION['avatar'];
 
                 <button id="upload-background-btn" class="action-btn secondary-btn">Subir Fondo Animado</button>
                 <input type="file" id="background-file-input" accept="image/gif, video/mp4" style="display: none;">
+                <button id="delete-user-background-btn" class="action-btn secondary-btn" style="margin-left:8px;" disabled>Eliminar Fondo Usuario</button>
             </div>
         </section>
 

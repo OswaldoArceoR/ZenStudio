@@ -933,7 +933,24 @@ function loadFondosGlobalBlobs() {
     function renderUserServerSounds(serverUserSounds) {
         if (!userSoundList) return;
         userSoundList.innerHTML = '';
-        serverUserSounds.forEach(s => userSoundList.appendChild(createSoundItem(s)));
+        selectedServerUserSoundId = null;
+        const deleteBtn = document.getElementById('delete-user-sound-btn');
+        if (deleteBtn) deleteBtn.disabled = true;
+        serverUserSounds.forEach(s => {
+            const el = createSoundItem(s);
+            // Selección para eliminación (solo sonidos servidor usuario prefijo srv_user_)
+            el.addEventListener('click', (e) => {
+                // Evitar que botones internos (play) cambien selección accidentalmente
+                if (e.target.closest('.sound-toggle-btn')) return;
+                // Limpiar selección previa
+                userSoundList.querySelectorAll('.selected-sound').forEach(n => n.classList.remove('selected-sound'));
+                el.classList.add('selected-sound');
+                // Guardar ID numérico (remover prefijo)
+                selectedServerUserSoundId = s.id.replace('srv_user_', '');
+                if (deleteBtn) deleteBtn.disabled = false;
+            });
+            userSoundList.appendChild(el);
+        });
     }
 
     async function loadServerUserSounds() {
@@ -972,6 +989,34 @@ function loadFondosGlobalBlobs() {
     });
 
     refreshUserSoundsBtn?.addEventListener('click', () => loadServerUserSounds());
+
+    // --- Eliminación de sonido de servidor ---
+    let selectedServerUserSoundId = null; // ID numérico de la fila seleccionada
+    const deleteServerSoundBtn = document.getElementById('delete-user-sound-btn');
+
+    async function deleteSelectedServerUserSound() {
+        if (!selectedServerUserSoundId) return;
+        if (!confirm('¿Eliminar el sonido seleccionado del servidor?')) return;
+        try {
+            const resp = await fetch('eliminarSonidoUsuario.php?id=' + encodeURIComponent(selectedServerUserSoundId), { method: 'GET' });
+            const data = await resp.json().catch(() => ({ success:false, message:'Respuesta no válida' }));
+            if (!data.success) {
+                if (typeof showToast === 'function') showToast('No se pudo eliminar: ' + (data.message || 'Error')); else alert('Error al eliminar: ' + (data.message || ''));            
+                return;
+            }
+            if (typeof showToast === 'function') showToast('Sonido eliminado');
+            // Recargar lista
+            loadServerUserSounds();
+        } catch (err) {
+            console.error('Error eliminando sonido usuario:', err);
+            if (typeof showToast === 'function') showToast('Error eliminando sonido');
+        } finally {
+            selectedServerUserSoundId = null;
+            if (deleteServerSoundBtn) deleteServerSoundBtn.disabled = true;
+        }
+    }
+
+    deleteServerSoundBtn?.addEventListener('click', deleteSelectedServerUserSound);
 
     // Asegura que la UI de sonidos muestre todo como detenido/silencioso
     function resetAmbientUI() {
@@ -1828,6 +1873,8 @@ function loadFondosGlobalBlobs() {
     // --- Fondo de Usuario: Carga dinámica y subida al servidor ---
     const uploadBackgroundBtn = document.getElementById('upload-background-btn');
     const backgroundFileInput = document.getElementById('background-file-input');
+    const deleteUserBackgroundBtn = document.getElementById('delete-user-background-btn');
+    let currentUserBackgroundId = null; // ID del fondo de usuario actualmente aplicado
 
     if (uploadBackgroundBtn && backgroundFileInput) {
         uploadBackgroundBtn.addEventListener('click', () => backgroundFileInput.click());
@@ -1932,9 +1979,13 @@ function loadFondosGlobalBlobs() {
                     nameDiv.textContent = nombre.replace(/\.(mp4|gif|png|jpe?g)$/i,'');
                     item.appendChild(nameDiv);
 
+                    // Guardar id para eliminación futura
+                    item.dataset.userBgId = fondo.id;
                     item.addEventListener('click', () => {
                         applyBackground(item.dataset.bgFile, item.dataset.bgType);
-                        localStorage.setItem('zen_active_background', JSON.stringify({ file: item.dataset.bgFile, type: item.dataset.bgType }));
+                        localStorage.setItem('zen_active_background', JSON.stringify({ file: item.dataset.bgFile, type: item.dataset.bgType, userBgId: fondo.id, scope: 'user' }));
+                        currentUserBackgroundId = fondo.id;
+                        if (deleteUserBackgroundBtn) deleteUserBackgroundBtn.disabled = false;
                         showToast('Fondo aplicado');
                     });
 
@@ -1949,6 +2000,66 @@ function loadFondosGlobalBlobs() {
         cargarFondosUsuarioListado();
         loadUserBackgrounds();
     });
+
+    // Eliminar fondo de usuario seleccionado
+    if (deleteUserBackgroundBtn) {
+        deleteUserBackgroundBtn.addEventListener('click', async () => {
+            if (!currentUserBackgroundId) return;
+            if (!confirm('¿Eliminar el fondo de usuario seleccionado?')) return;
+            try {
+                const resp = await fetch('eliminarFondoUsuario.php', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: new URLSearchParams({ id: String(currentUserBackgroundId) })
+                });
+                const data = await resp.json().catch(() => ({ success:false, message:'Respuesta inválida'}));
+                if (!data.success) {
+                    showToast('No se pudo eliminar');
+                    return;
+                }
+                // Si el fondo eliminado era el activo, limpiar
+                const saved = localStorage.getItem('zen_active_background');
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        if (parsed.userBgId == currentUserBackgroundId) {
+                            localStorage.removeItem('zen_active_background');
+                            const bgC = document.getElementById('background-container');
+                            if (bgC) { bgC.style.backgroundImage='none'; bgC.innerHTML=''; }
+                        }
+                    } catch(e){}
+                }
+                // Quitar elemento de la galería
+                const gallery = document.getElementById('user-background-gallery');
+                if (gallery) {
+                    const el = gallery.querySelector(`[data-user-bg-id="${currentUserBackgroundId}"]`);
+                    if (el) el.remove();
+                }
+                currentUserBackgroundId = null;
+                deleteUserBackgroundBtn.disabled = true;
+                showToast('Fondo eliminado');
+                // Recargar lista para mantener consistencia
+                loadUserBackgrounds();
+            } catch (err) {
+                console.error('Error eliminando fondo usuario:', err);
+                showToast('Error al eliminar');
+            }
+        });
+    }
+
+    // Al aplicar un fondo global, desactivar botón de eliminar
+    function markGlobalBackgroundSelection() {
+        currentUserBackgroundId = null;
+        if (deleteUserBackgroundBtn) deleteUserBackgroundBtn.disabled = true;
+    }
+    // Reasignar también en selección global
+    const originalReassign = reassignBackgroundEvents;
+    reassignBackgroundEvents = function() {
+        originalReassign();
+        const gallery = document.querySelector('#background-gallery');
+        if (!gallery) return;
+        gallery.addEventListener('click', markGlobalBackgroundSelection, true);
+    };
 
     // Utilidad simple para avisos flotantes
     function showToast(msg, duration = 2500) {
