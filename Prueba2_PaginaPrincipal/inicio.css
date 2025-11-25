@@ -43,6 +43,14 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* ... código anterior ... */
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
 .landing-hero__content h1 {
     font-size: clamp(3.5rem, 8vw, 6rem);
     margin: 0 0 10px;
@@ -174,5 +182,48 @@ body {
     }
     .about-section__image-container {
         max-width: 100%;
+    }
+}
+
+/* ======================================================= */
+/* === CORRECCIÓN DEFINITIVA: LOGO Y TEXTO HORIZONTAL === */
+/* ======================================================= */
+
+.brand-container {
+    display: flex !important;       /* Fuerza el modo flexible */
+    flex-direction: row !important; /* Fuerza que estén en FILA (lado a lado) */
+    align-items: center !important; /* Centrados verticalmente */
+    justify-content: center !important; /* El GRUPO entero centrado en pantalla */
+    gap: 20px !important;           /* Espacio entre logo y texto */
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+/* Usamos un selector más específico para obligar al texto a obedecer */
+.landing-hero__content .brand-container h1 {
+    margin: 0 !important;       /* Elimina márgenes que empujan el logo */
+    padding: 0 !important;
+    width: auto !important;     /* Evita que el texto intente ocupar todo el ancho */
+    line-height: 1 !important;
+    display: block;
+}
+
+.hero-logo {
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+/* Ajuste para móviles */
+@media (max-width: 600px) {
+    .hero-logo {
+        width: 50px;
+        height: 50px;
+    }
+    /* En móvil reducimos un poco el texto para que quepan bien juntos */
+    .landing-hero__content .brand-container h1 {
+        font-size: 2.5rem; 
     }
 }

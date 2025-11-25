@@ -143,7 +143,13 @@
     // ---------- Fondos Animados (Espacios) ----------
     const defaultBackgrounds = [
         { id: 'hoguera', name: 'Hoguera Relajante', file: 'hogera.gif', isDefault: true },
-        { id: 'anime', name: 'Paisaje Anime', file: 'anime.gif', isDefault: true }
+        { id: 'anime', name: 'Paisaje Anime', file: 'anime.gif', isDefault: true },
+        { id: 'disco', name: 'Disco', file: '../IMAGENES/disco.gif', isDefault: true },
+        { id: 'gato', name: 'Gato negro', file: '../IMAGENES/Gatonegro.gif', isDefault: true },
+        { id: 'ghiblidam', name: 'Ghiblidam', file: '../IMAGENES/ghiblidam.gif', isDefault: true },
+        { id: 'GlowCats', name: 'GlowCats', file: '../IMAGENES/GlowCats.gif', isDefault: true },
+        { id: 'SummerLoop', name: 'Río', file: '../IMAGENES/SummerLoop.gif', isDefault: true },
+
     ];
     let customBackgrounds = JSON.parse(localStorage.getItem(LS.CUSTOM_BGS) || '[]');
     let allBackgrounds = [...defaultBackgrounds, ...customBackgrounds];
@@ -598,7 +604,9 @@
     // ---------- Sounds (ambient) ----------
     const defaultSounds = [
         { id: 'rain_thunder', name: 'Lluvia y Truenos', file: 'Sonidodelluvia.mp3' },
-        { id: 'ocean_relax', name: 'Océano Relajante', file: 'Sonidodeoceano.mp3' }
+        { id: 'ocean_relax', name: 'Océano Relajante', file: 'Sonidodeoceano.mp3' },
+        { id: 'rio_relax', name: 'Río', file: 'rio.mp3' },
+        { id: 'gato', name: 'Gato', file: 'gato.mp3' },
     ];
     let userSounds = JSON.parse(localStorage.getItem(LS.USER_SOUNDS) || '[]');
     let soundsData = [...defaultSounds, ...userSounds];
@@ -1525,8 +1533,18 @@
         if (avatarToggle) avatarToggle.src = avatarUrl;
         if (menuAvatarImg) menuAvatarImg.src = avatarUrl;
 
-        if (menuAccountName) menuAccountName.textContent = data.accountName || 'Usuario';
+        // Guardamos el nombre en una variable para usarlo en dos lugares aqui va la coneccion para que aparesca el nombre de la cuenta
+        const currentName = data.accountName || 'Usuario';
+
+        // 1. Actualizamos el menú desplegable
+        if (menuAccountName) menuAccountName.textContent = currentName;
         if (menuUserEmail) menuUserEmail.textContent = data.email || 'email@ejemplo.com';
+
+        // 2. NUEVO: Actualizamos el nombre al lado del icono
+        const topbarUserName = $('#topbar-user-name');
+        if (topbarUserName) {
+            topbarUserName.textContent = currentName;
+        }
     }
 
     // Actualizar el menú si los datos del perfil cambian en otra pestaña

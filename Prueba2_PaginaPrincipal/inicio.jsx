@@ -15,6 +15,7 @@ const LandingHero = () => {
     return (
         <header className={`landing-hero ${isVisible ? 'visible' : ''}`}>
             <div className="landing-hero__content">
+                <img src="logo.jpeg" alt="ZenStudio Logo" className="hero-logo" /> //Agregamos logo
                 <h1>ZenStudio</h1>
                 <p>Tu espacio para la concentración y la productividad.</p>
                 <div className="landing-hero__scroll-indicator">

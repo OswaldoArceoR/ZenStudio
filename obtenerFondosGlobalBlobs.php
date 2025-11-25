@@ -2,7 +2,7 @@
 // obtenerFondosGlobalBlobs.php
 
 require_once __DIR__ . '/INCLUDES/conexion.php';
-header('Content-Type: application/json; charset=utf-8');
+header('Content-Type: application/json; charset=utf-8');  
 
 function errorJson($msg) {
   http_response_code(500);

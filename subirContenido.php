@@ -364,107 +364,100 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
   <link rel="stylesheet" href="CSS/principal.css">
   <link rel="stylesheet" href="CSS/fondos.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
-
-  <button class="theme-toggle-btn" id="theme-toggle" title="Alternar Tema" aria-pressed="false" style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
-    <svg id="moon-icon" class="icon-toggle" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-    </svg>
-    <svg id="sun-icon" class="icon-toggle" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="5"></circle>
-      <line x1="12" y1="1" x2="12" y2="3"></line>
-      <line x1="12" y1="21" x2="12" y2="23"></line>
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-      <line x1="1" y1="12" x2="3" y2="12"></line>
-      <line x1="21" y1="12" x2="23" y2="12"></line>
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-    </svg>
-  </button>
-
-  <div class="admin-container">
-    <header class="admin-header">
-      <h1>Subir Contenido Global</h1>
-      <a href="paginaprincipal.php" classewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
-        Volver al Dashboard
-      </a>
-    </header>
-
-    <main class="admin-content">
-      <?php if (isset($message)): ?>
-        <div class="message <?php echo ($errorCount > 0) ? 'error' : 'success'; ?>">
-          <?php echo $message; ?>
+</head>
+<body data-theme="light">
+  <div class="background-container">
+    <div class="zen-interface">
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1>Subir Contenido</h1>
         </div>
-      <?php endif; ?>
+        <div class="topbar-right">
+          <button id="theme-toggle" class="icon-toggle">
+            <span id="sun-icon">☀️</span>
+            <span id="moon-icon">🌙</span>
+          </button>
+          <a href="paginaprincipal.php" class="primary-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+          </a>
+        </div>
+      </header>
+      <main class="main-content">
+        <?php if (isset($message)): ?>
+          <div class="message <?php echo ($errorCount > 0) ? 'error' : 'success'; ?>">
+            <?php echo $message; ?>
+          </div>
+        <?php endif; ?>
 
-      <!-- Selector de tipo (sin cambios) -->
-      <div class="type-selector">
-        <button class="type-btn active" data-type="fondos">🎨 Fondos Animados</button>
-        <button class="type-btn" data-type="sonidos">🎵 Sonidos Ambientales</button>
-      </div>
+        <!-- Selector de tipo (sin cambios) -->
+        <div class="type-selector">
+          <button class="type-btn active" data-type="fondos">🎨 Fondos Animados</button>
+          <button class="type-btn" data-type="sonidos">🎵 Sonidos Ambientales</button>
+        </div>
 
-      <!-- Formulario Fondos → ahora guarda en BLOB por defecto -->
-      <form action="subirContenido.php" method="POST" enctype="multipart/form-data" class="upload-form active" id="form-fondos">
-        <input type="hidden" name="tipo" value="fondos">
-        <div class="form-group">
-          <label for="categoria-fondos">Categoría:</label>
-          <select name="categoria" id="categoria-fondos" required class="form-select">
-            <option value="Naturaleza">Naturaleza</option>
-            <option value="Abstracto">Abstracto</option>
-            <option value="Ciudad">Ciudad</option>
-            <option value="Espacio">Espacio</option>
-            <option value="Animación">Animación</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="archivos-fondos">Seleccionar fondos animados:</label>
-          <input type="file" name="archivos[]" id="archivos-fondos" multiple
-                 accept=".gif,.webp,.apng,.mp4" required class="form-file">
-          <small>Formatos: GIF, WebP, APNG, MP4 (max 50MB cada uno)</small>
-        </div>
-        <div id="file-preview-fondos" class="file-preview"></div>
-        <button type="submit" class="action-btn primary-btn">Subir Fondos</button>
-      </form>
+        <!-- Formulario Fondos → ahora guarda en BLOB por defecto -->
+        <form action="subirContenido.php" method="POST" enctype="multipart/form-data" class="upload-form active" id="form-fondos">
+          <input type="hidden" name="tipo" value="fondos">
+          <div class="form-group">
+            <label for="categoria-fondos">Categoría:</label>
+            <select name="categoria" id="categoria-fondos" required class="form-select">
+              <option value="Naturaleza">Naturaleza</option>
+              <option value="Abstracto">Abstracto</option>
+              <option value="Ciudad">Ciudad</option>
+              <option value="Espacio">Espacio</option>
+              <option value="Animación">Animación</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="archivos-fondos">Seleccionar fondos animados:</label>
+            <input type="file" name="archivos[]" id="archivos-fondos" multiple
+                   accept=".gif,.webp,.apng,.mp4" required class="form-file">
+            <small>Formatos: GIF, WebP, APNG, MP4 (max 50MB cada uno)</small>
+          </div>
+          <div id="file-preview-fondos" class="file-preview"></div>
+          <button type="submit" class="action-btn primary-btn">Subir Fondos</button>
+        </form>
 
-      <!-- Formulario Sonidos → ahora guarda en BLOB por defecto -->
-      <form action="subirContenido.php" method="POST" enctype="multipart/form-data" class="upload-form" id="form-sonidos">
-        <input type="hidden" name="tipo" value="sonidos">
-        <div class="form-group">
-          <label for="categoria-sonidos">Categoría:</label>
-          <select name="categoria" id="categoria-sonidos" required class="form-select">
-            <option value="Naturaleza">Naturaleza</option>
-            <option value="Agua">Agua</option>
-            <option value="Ciudad">Ciudad</option>
-            <option value="Instrumental">Instrumental</option>
-            <option value="Ambiental">Ambiental</option>
-            <option value="Blanco">Ruido Blanco</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="archivos-sonidos">Seleccionar sonidos ambientales:</label>
-          <input type="file" name="archivos[]" id="archivos-sonidos" multiple
-                 accept=".mp3,.wav,.ogg,.m4a,.mp4" required class="form-file">
-          <small>Formatos: MP3, WAV, OGG, M4A (max 20MB cada uno)</small>
-        </div>
-        <div id="file-preview-sonidos" class="file-preview"></div>
-        <button type="submit" class="action-btn primary-btn">Subir Sonidos</button>
-      </form>
+        <!-- Formulario Sonidos → ahora guarda en BLOB por defecto -->
+        <form action="subirContenido.php" method="POST" enctype="multipart/form-data" class="upload-form" id="form-sonidos">
+          <input type="hidden" name="tipo" value="sonidos">
+          <div class="form-group">
+            <label for="categoria-sonidos">Categoría:</label>
+            <select name="categoria" id="categoria-sonidos" required class="form-select">
+              <option value="Naturaleza">Naturaleza</option>
+              <option value="Agua">Agua</option>
+              <option value="Ciudad">Ciudad</option>
+              <option value="Instrumental">Instrumental</option>
+              <option value="Ambiental">Ambiental</option>
+              <option value="Blanco">Ruido Blanco</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="archivos-sonidos">Seleccionar sonidos ambientales:</label>
+            <input type="file" name="archivos[]" id="archivos-sonidos" multiple
+                   accept=".mp3,.wav,.ogg,.m4a,.mp4" required class="form-file">
+            <small>Formatos: MP3, WAV, OGG, M4A (max 20MB cada uno)</small>
+          </div>
+          <div id="file-preview-sonidos" class="file-preview"></div>
+          <button type="submit" class="action-btn primary-btn">Subir Sonidos</button>
+        </form>
 
-      <!-- Contenido existente (sin cambios visuales) -->
-      <div class="content-sections">
-        <div class="content-section active" id="section-fondos">
-          <h2>Fondos Existentes</h2>
-          <div id="fondos-list" class="fondos-grid"></div>
+        <!-- Contenido existente (sin cambios visuales) -->
+        <div class="content-sections">
+          <div class="content-section active" id="section-fondos">
+            <h2>Fondos Existentes</h2>
+            <div id="fondos-list" class="fondos-grid"></div>
+          </div>
+          <div class="content-section" id="section-sonidos">
+            <h2>Sonidos Existentes</h2>
+            <div id="sonidos-list" class="sonidos-grid"></div>
+          </div>
         </div>
-        <div class="content-section" id="section-sonidos">
-          <h2>Sonidos Existentes</h2>
-          <div id="sonidos-list" class="sonidos-grid"></div>
-        </div>
-      </div>
-    </main>
+      </main>
+    </div>
   </div>
 
   <script>
@@ -537,6 +530,16 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
         });
       });
     }
+
+    // ---- Tema (nuevo código) ----
+    const themeToggle = document.getElementById('theme-toggle');
+    const body = document.body;
+
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = body.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        body.setAttribute('data-theme', newTheme);
+    });
   </script>
 </body>
 </html>

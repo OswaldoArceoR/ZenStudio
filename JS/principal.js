@@ -47,11 +47,24 @@ function setCookie(name, value, days) {
     // In-memory state
     let activeAudios = {};
     let tasks = JSON.parse(localStorage.getItem(LS.TASKS) || 'null') || [{ text: "Crear estructura inicial del proyecto", completed: true }];
-    let isMutedGlobally = false;
+    let isMutedGlobally = true;
     let eventsByDate = JSON.parse(localStorage.getItem(LS.EVENTS) || '{}');
     let panelPositions = JSON.parse(localStorage.getItem(LS.POS) || '{}');
     let panelSizes = JSON.parse(localStorage.getItem(LS.SIZES) || '{}');
     let pendingSoundFile = null;
+    // --- Solo reproducir sonidos tras click explícito en el botón play/pause de cada sonido ---
+    window.__zenstudio_user_interacted = false;
+    function setUserInteracted() {
+        window.__zenstudio_user_interacted = true;
+        document.removeEventListener('pointerdown', setUserInteracted, true);
+        document.removeEventListener('keydown', setUserInteracted, true);
+    }
+    // Solo marcar interacción si el click es en un botón de play/pause de sonido
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.sound-toggle-btn')) {
+            setUserInteracted();
+        }
+    }, true);
 
     // Setup theme from localStorage
     (() => {
@@ -156,66 +169,7 @@ function setCookie(name, value, days) {
 
 
     // ---------- Fondos Animados (Desde Base de Datos, solo background-gallery) ----------
-    function loadFondosGlobalBlobs() {
-      fetch('obtenerFondosGlobalBlobs.php')
-        .then(r => r.json())
-        .then(fondos => {
-          const gallery = document.querySelector('#background-gallery');
-          if (!gallery) return;
-
-                gallery.innerHTML = '';
-                if (!Array.isArray(fondos) || fondos.length === 0) {
-                    gallery.innerHTML = '<div style="color:red;text-align:center;padding:1em;">No hay fondos globales disponibles en la base de datos.</div>';
-                    console.warn('Fondos globales vacíos:', fondos);
-                    return;
-                }
-
-                fondos.forEach(f => {
-                    const item = document.createElement('div');
-                    item.className = 'background-item';
-                    // fallback MIME si no existe
-                    const mime = f.mime || 'image/gif';
-                    item.dataset.bgFile = f.url;
-                    item.dataset.bgType = mime;
-
-                    // Crear elemento multimedia según MIME
-                    if (mime.startsWith('image/')) {
-                        const img = document.createElement('img');
-                        img.src = f.url;
-                        img.alt = f.nombre || '';
-                        img.loading = 'lazy';
-                        item.appendChild(img);
-                    } else if (mime.startsWith('video/')) {
-                        const video = document.createElement('video');
-                        video.src = f.url;
-                        video.muted = true;
-                        video.loop = true;
-                        video.autoplay = true;
-                        video.playsInline = true;
-                        item.appendChild(video);
-                    } else {
-                        item.innerHTML = '<div style="color:gray;">Tipo no soportado: ' + mime + '</div>';
-                    }
-
-                    const nameDiv = document.createElement('div');
-                    nameDiv.className = 'background-name';
-                    nameDiv.textContent = f.nombre || '';
-                    item.appendChild(nameDiv);
-
-                    gallery.appendChild(item);
-                });
-
-                // Reasignar eventos para permitir aplicar el fondo seleccionado
-                reassignBackgroundEvents();
-        })
-            .catch(err => {
-                const gallery = document.querySelector('#background-gallery');
-                if (gallery) {
-                    gallery.innerHTML = '<div style="color:red;text-align:center;padding:1em;">Error al cargar los fondos globales.</div>';
-                }
-                console.error('Error BLOB fondos globales:', err);
-            });
-    }
+    // (Eliminada segunda definición duplicada de loadFondosGlobalBlobs para evitar conflictos)
 
     // Asignar eventos para seleccionar fondo desde la galería principal
     function reassignBackgroundEvents() {
@@ -267,34 +221,6 @@ function loadGlobalSoundsBlobs() {
         .catch(err => console.error('Error BLOB sonidos globales:', err));
 }
 
-
-
-
-
-function reassignBackgroundEvents() {
-    const gallery = document.querySelector('#background-gallery');
-    if (!gallery) return;
-    gallery.addEventListener('click', (e) => {
-        const item = e.target.closest('.background-item');
-        if (!item) return;
-        const bgFile = item.dataset.bgFile;
-        const bgType = item.dataset.bgType || 'image/gif';
-        console.log('[FONDO] Click fondo:', { bgFile, bgType, item });
-        if (!bgFile) {
-            alert('No se encontró la URL del fondo (bgFile)');
-            return;
-        }
-        if (!bgType) {
-            alert('No se encontró el tipo MIME del fondo (bgType)');
-            return;
-        }
-        applyBackground(bgFile, bgType);
-        localStorage.setItem('zen_active_background', JSON.stringify({ file: bgFile, type: bgType }));
-        // showPanel('spaces'); // si quieres cerrar el panel tras seleccionar
-    });
-}
-
-    
     function applyBackground(bgFile, bgType) {
         const bgContainer = document.querySelector('#background-container');
         if (!bgContainer) return;
@@ -308,14 +234,29 @@ function reassignBackgroundEvents() {
             return;
         }
 
+        // Permitir tipo personalizado 'user' proveniente de fondos de usuario
+        if (bgType === 'user') {
+            // Tratarlo como imagen genérica (gif) para compatibilidad
+            bgType = 'image/gif';
+        }
+
         if (bgType.startsWith('image/')) {
-            // Imagen (incluye GIF, PNG, JPG, etc)
+            // Imagen (incluye GIF, PNG, JPG, etc). Para GIF forzamos recarga para reiniciar animación.
+            const isGif = bgType === 'image/gif' || /\.gif($|\?)/i.test(bgFile);
             const img = document.createElement('img');
-            img.src = bgFile;
             img.alt = 'Fondo';
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'cover';
+            // Forzar reinicio animación GIF evitando caché
+            img.src = isGif ? (bgFile + (bgFile.includes('?') ? '&' : '?') + 't=' + Date.now()) : bgFile;
+            Object.assign(img.style, {
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                position: 'absolute',
+                top: '0',
+                left: '0',
+                zIndex: '-1',
+                pointerEvents: 'none'
+            });
             img.onerror = function() {
                 bgContainer.innerHTML = '<div style="color:red;text-align:center;">No se pudo cargar la imagen del fondo.</div>';
                 console.error('No se pudo cargar la imagen:', bgFile);
@@ -740,10 +681,58 @@ function loadFondosGlobalBlobs() {
     const soundListContainer = $('#sound-list-container');
     const uploadSoundBtn = $('#upload-sound-btn');
     const soundFileInput = $('#sound-file-input');
+    const userSoundsSection = document.getElementById('user-sounds-section');
+    const toggleUserSoundsBtn = document.getElementById('toggle-user-sounds-btn');
+    const refreshUserSoundsBtn = document.getElementById('refresh-user-sounds-btn');
+    const userSoundList = document.getElementById('user-sound-list');
 
     // --- Cargar sonidos globales desde la base de datos al iniciar ---
     document.addEventListener('DOMContentLoaded', function() {
         loadGlobalSoundsBlobs();
+        // Silencio inmediato y refuerzo posterior (sin espera audible)
+        forceMuteAllAudios();
+        setTimeout(forceMuteAllAudios, 600);
+    });
+
+    // --- Utilidad central para pausar y mutear todo ---
+    function forceMuteAllAudios() {
+        try {
+            const audios = document.querySelectorAll('audio');
+            audios.forEach(a => {
+                a.pause();
+                a.currentTime = 0;
+                a.muted = true;
+            });
+        } catch(e) {}
+        for (const id in activeAudios) {
+            const obj = activeAudios[id];
+            if (obj && obj.player) {
+                try {
+                    obj.player.pause();
+                    obj.player.currentTime = 0;
+                    obj.player.muted = true;
+                } catch(e) {}
+            }
+        }
+    }
+
+    // Asegurar silencio al ocultar la página (cambio de pestaña / navegación a otra vista)
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            forceMuteAllAudios();
+        }
+    });
+
+    // Silenciar justo antes de descargar la página (navegar a perfil, cerrar pestaña, etc.)
+    window.addEventListener('beforeunload', () => {
+        forceMuteAllAudios();
+    });
+
+    // pageshow: cuando se vuelve desde bfcache (historial atrás) o navegación con historial
+    window.addEventListener('pageshow', (e) => {
+        forceMuteAllAudios();
+        activeAudios = {}; // limpiar referencias para evitar reactivación involuntaria
+        resetAmbientUI();
     });
 
     function setGlobalMute(muted) {
@@ -782,36 +771,43 @@ function loadFondosGlobalBlobs() {
     function toggleSound(id, name, file) {
         // Si ya existe, usar la misma instancia
         if (!activeAudios[id]) {
-            // Si existe un audio previo con ese id, pausarlo y eliminarlo
             if (activeAudios[id] && activeAudios[id].player) {
                 try { activeAudios[id].player.pause(); } catch(e){}
                 delete activeAudios[id];
             }
-            // Crear solo una instancia Audio por sonido
             const audio = new Audio(file);
-            audio.loop = false; // No loop por defecto
+            audio.loop = false;
             const soundItemUI = soundListContainer.querySelector(`[data-sound-id="${id}"]`);
             const slider = soundItemUI?.querySelector('.volume-slider');
             audio.volume = slider ? parseFloat(slider.value) : 0.5;
-            audio.muted = isMutedGlobally;
+            audio.muted = true;
             activeAudios[id] = { player: audio, name, file };
         }
 
         const soundInfo = activeAudios[id];
         const player = soundInfo.player;
 
+        if (!window.__zenstudio_user_interacted) {
+            console.log(`[DEBUG] Ignorado play/pause de '${name}' porque el usuario no ha interactuado`);
+            updateSoundItemUI(id);
+            return;
+        }
+
         if (player.paused) {
-            player.loop = true; // Solo hacer loop cuando el usuario da play
+            player.loop = true;
+            player.muted = false;
+            console.log(`[DEBUG] Intentando reproducir '${name}'`);
             player.play().catch(e => {
-                // Si es NotSupportedError, limpiar la instancia
                 if (e.name === 'NotSupportedError') {
                     delete activeAudios[id];
                 }
-                console.error(`Error al reproducir ${name}:`, e);
+                console.error(`[DEBUG] Error al reproducir ${name}:`, e);
             });
         } else {
             player.pause();
             player.loop = false;
+            player.muted = true;
+            console.log(`[DEBUG] Pausado y muteado '${name}'`);
         }
 
         updateSoundItemUI(id);
@@ -861,6 +857,8 @@ function loadFondosGlobalBlobs() {
             if (activeAudios[sound.id] && activeAudios[sound.id].player) activeAudios[sound.id].player.volume = v;
         });
         container.appendChild(volGroup);
+        // Ocultar el control de volumen hasta que el sonido esté realmente reproduciéndose
+        volGroup.style.display = 'none';
         
         container.dataset.soundId = sound.id;
 
@@ -868,7 +866,8 @@ function loadFondosGlobalBlobs() {
     }
 
     function updateSoundItemUI(soundId) {
-        const container = soundListContainer.querySelector(`[data-sound-id="${soundId}"]`);
+        // Buscar en ambas listas (global y usuario servidor)
+        const container = document.querySelector(`[data-sound-id="${soundId}"]`);
         if (!container) return;
 
         const soundInfo = activeAudios[soundId];
@@ -889,9 +888,146 @@ function loadFondosGlobalBlobs() {
 
     function renderSoundList() {
         if (!soundListContainer) return;
+        // Limpiar todos los audios activos antes de renderizar la lista
+        for (const id in activeAudios) {
+            if (activeAudios[id] && activeAudios[id].player) {
+                try {
+                    activeAudios[id].player.pause();
+                    activeAudios[id].player.currentTime = 0;
+                    activeAudios[id].player.muted = true;
+                    console.log('[DEBUG] renderSoundList: mute/pause', id, activeAudios[id].player.src, activeAudios[id].player.paused, activeAudios[id].player.muted);
+                } catch(e){}
+            }
+        }
+        activeAudios = {};
+
         soundListContainer.innerHTML = '';
         // soundsData ya contiene globales + usuario
         soundsData.forEach(s => soundListContainer.appendChild(createSoundItem(s)));
+
+        // Refuerza la pausa y mute de todos los sonidos cada vez que se renderiza la lista
+        setTimeout(() => {
+            for (const id in activeAudios) {
+                if (activeAudios[id] && activeAudios[id].player) {
+                    try {
+                        activeAudios[id].player.pause();
+                        activeAudios[id].player.currentTime = 0;
+                        activeAudios[id].player.muted = true;
+                        console.log('[DEBUG] renderSoundList (timeout): mute/pause', id, activeAudios[id].player.src, activeAudios[id].player.paused, activeAudios[id].player.muted);
+                    } catch(e){}
+                }
+            }
+            document.querySelectorAll('audio').forEach(audio => {
+                try {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.muted = true;
+                    console.log('[DEBUG] renderSoundList (timeout): mute/pause <audio>', audio.src, audio.paused, audio.muted);
+                } catch(e){}
+            });
+            resetAmbientUI();
+        }, 300);
+    }
+
+    // Renderizado separado para sonidos del servidor (sección usuario)
+    function renderUserServerSounds(serverUserSounds) {
+        if (!userSoundList) return;
+        userSoundList.innerHTML = '';
+        selectedServerUserSoundId = null;
+        const deleteBtn = document.getElementById('delete-user-sound-btn');
+        if (deleteBtn) deleteBtn.disabled = true;
+        serverUserSounds.forEach(s => {
+            const el = createSoundItem(s);
+            // Selección para eliminación (solo sonidos servidor usuario prefijo srv_user_)
+            el.addEventListener('click', (e) => {
+                // Evitar que botones internos (play) cambien selección accidentalmente
+                if (e.target.closest('.sound-toggle-btn')) return;
+                // Limpiar selección previa
+                userSoundList.querySelectorAll('.selected-sound').forEach(n => n.classList.remove('selected-sound'));
+                el.classList.add('selected-sound');
+                // Guardar ID numérico (remover prefijo)
+                selectedServerUserSoundId = s.id.replace('srv_user_', '');
+                if (deleteBtn) deleteBtn.disabled = false;
+            });
+            userSoundList.appendChild(el);
+        });
+    }
+
+    async function loadServerUserSounds() {
+        try {
+            const resp = await fetch('obtenerSonidosUsuario.php');
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            if (!data.success) {
+                console.warn('Error sonidos usuario:', data.message);
+                if (typeof showToast === 'function') showToast('Error listando sonidos usuario');
+                return;
+            }
+            // Eliminar anteriores srv_user_ de soundsData
+            soundsData = soundsData.filter(s => !s.id.startsWith('srv_user_'));
+            const serverUserSounds = data.sonidos.map(s => ({
+                id: 'srv_user_' + s.id,
+                name: s.nombre,
+                file: s.url,
+                mime: s.mime || 'audio/mpeg'
+            }));
+            soundsData = [...soundsData, ...serverUserSounds];
+            renderUserServerSounds(serverUserSounds);
+            if (typeof showToast === 'function') showToast('Sonidos usuario cargados');
+        } catch (err) {
+            console.error('Fallo al cargar sonidos usuario:', err);
+            if (typeof showToast === 'function') showToast('Fallo al cargar sonidos usuario');
+        }
+    }
+
+    toggleUserSoundsBtn?.addEventListener('click', () => {
+        if (!userSoundsSection) return;
+        const visible = userSoundsSection.style.display !== 'none';
+        userSoundsSection.style.display = visible ? 'none' : 'block';
+        toggleUserSoundsBtn.textContent = visible ? 'Mostrar Sonidos del Usuario' : 'Ocultar Sonidos del Usuario';
+        if (!visible) loadServerUserSounds();
+    });
+
+    refreshUserSoundsBtn?.addEventListener('click', () => loadServerUserSounds());
+
+    // --- Eliminación de sonido de servidor ---
+    let selectedServerUserSoundId = null; // ID numérico de la fila seleccionada
+    const deleteServerSoundBtn = document.getElementById('delete-user-sound-btn');
+
+    async function deleteSelectedServerUserSound() {
+        if (!selectedServerUserSoundId) return;
+        if (!confirm('¿Eliminar el sonido seleccionado del servidor?')) return;
+        try {
+            const resp = await fetch('eliminarSonidoUsuario.php?id=' + encodeURIComponent(selectedServerUserSoundId), { method: 'GET' });
+            const data = await resp.json().catch(() => ({ success:false, message:'Respuesta no válida' }));
+            if (!data.success) {
+                if (typeof showToast === 'function') showToast('No se pudo eliminar: ' + (data.message || 'Error')); else alert('Error al eliminar: ' + (data.message || ''));            
+                return;
+            }
+            if (typeof showToast === 'function') showToast('Sonido eliminado');
+            // Recargar lista
+            loadServerUserSounds();
+        } catch (err) {
+            console.error('Error eliminando sonido usuario:', err);
+            if (typeof showToast === 'function') showToast('Error eliminando sonido');
+        } finally {
+            selectedServerUserSoundId = null;
+            if (deleteServerSoundBtn) deleteServerSoundBtn.disabled = true;
+        }
+    }
+
+    deleteServerSoundBtn?.addEventListener('click', deleteSelectedServerUserSound);
+
+    // Asegura que la UI de sonidos muestre todo como detenido/silencioso
+    function resetAmbientUI() {
+        if (!soundListContainer) return;
+        soundListContainer.querySelectorAll('.sound-item').forEach(item => {
+            item.classList.remove('playing');
+            const btn = item.querySelector('.sound-toggle-btn');
+            if (btn) btn.innerHTML = playSVG();
+            const vol = item.querySelector('.volume-control-group');
+            if (vol) vol.style.display = 'none';
+        });
     }
 
     // --- Funcionalidad de subida y borrado de sonidos ---
@@ -899,7 +1035,7 @@ function loadFondosGlobalBlobs() {
         soundFileInput.click();
     });
 
-    soundFileInput?.addEventListener('change', (e) => {
+    soundFileInput?.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -908,6 +1044,30 @@ function loadFondosGlobalBlobs() {
             return;
         }
 
+        // Intento opcional de subida al servidor (no bloquea flujo local)
+        try {
+            const formData = new FormData();
+            formData.append('sound', file);
+            const resp = await fetch('subirSonidoUsuario.php', { method: 'POST', body: formData });
+            if (resp.ok) {
+                const result = await resp.json().catch(() => null);
+                if (result && result.success) {
+                    console.log('[UPLOAD] Sonido subido al servidor:', result);
+                    if (typeof showToast === 'function') showToast('Sonido subido exitosamente.');
+                } else {
+                    console.log('[UPLOAD] Respuesta servidor no exitosa:', result);
+                    if (typeof showToast === 'function') showToast('No se pudo guardar en servidor');
+                }
+            } else {
+                console.warn('[UPLOAD] Falló la petición de subida (status)', resp.status);
+                if (typeof showToast === 'function') showToast('Error al subir al servidor');
+            }
+        } catch (err) {
+            console.warn('[UPLOAD] Error subiendo sonido al servidor (continuará modo local):', err);
+            if (typeof showToast === 'function') showToast('Fallo subida servidor; se guardará local');
+        }
+
+        // Flujo local existente
         pendingSoundFile = file;
         openNameSoundModal();
     });
@@ -925,6 +1085,7 @@ function loadFondosGlobalBlobs() {
                 localStorage.setItem(LS.USER_SOUNDS, JSON.stringify(userSounds));
                 renderSoundList();
                 closeNameSoundModal();
+                if (typeof showToast === 'function') showToast('Sonido subido exitosamente.');
             };
             reader.readAsDataURL(pendingSoundFile);
             soundFileInput.value = '';
@@ -1070,7 +1231,10 @@ function loadFondosGlobalBlobs() {
         const track = localPlaylistFiles[index];
         localPlayer.src = URL.createObjectURL(track);
         localPlayer.muted = isMutedGlobally;
-        localPlayer.play();
+        // Solo reproducir si hay interacción del usuario
+        if (window.__zenstudio_user_interacted) {
+            localPlayer.play();
+        }
         trackTitle.textContent = track.name.replace(/\.[^/.]+$/, "");
         playBtn.innerHTML = pauseSVG();
         updatePlaylistUI();
@@ -1079,7 +1243,9 @@ function loadFondosGlobalBlobs() {
     function togglePlayPause() {
         if (localPlayer.src) {
             if (localPlayer.paused) {
-                localPlayer.play();
+                if (window.__zenstudio_user_interacted) {
+                    localPlayer.play();
+                }
                 playBtn.innerHTML = pauseSVG();
             } else {
                 localPlayer.pause();
@@ -1176,7 +1342,9 @@ function loadFondosGlobalBlobs() {
                 const completeSound = new Audio('task-complete.mp3');
                 completeSound.volume = 0.3;
                 completeSound.muted = isMutedGlobally;
-                completeSound.play().catch(err => console.log("No se pudo reproducir sonido.", err));
+                if (window.__zenstudio_user_interacted) {
+                    completeSound.play().catch(err => console.log("No se pudo reproducir sonido.", err));
+                }
             }
             renderTasks();
             saveTasks();
@@ -1500,7 +1668,130 @@ function loadFondosGlobalBlobs() {
 
     // ---------- Init ----------
     document.addEventListener('DOMContentLoaded', () => {
+                        // Solo marcar interacción si el usuario da clic en los botones de play/pause
+                        window.__zenstudio_user_interacted = false;
+                        function markUserInteraction() { window.__zenstudio_user_interacted = true; }
+                        document.body.addEventListener('click', function(e) {
+                            // Botón play/pause de sonidos ambientales
+                            if (e.target.closest('.sound-toggle-btn')) {
+                                markUserInteraction();
+                            }
+                            // Botón play/pause del reproductor local
+                            if (e.target.closest('#local-player-play')) {
+                                markUserInteraction();
+                            }
+                        }, true);
+                    // Marcar que el usuario ha interactuado tras cualquier clic, teclado o touch
+                    window.__zenstudio_user_interacted = false;
+                    function markUserInteraction() { window.__zenstudio_user_interacted = true; }
+                    window.addEventListener('click', markUserInteraction, { once: true, capture: true });
+                    window.addEventListener('keydown', markUserInteraction, { once: true, capture: true });
+                    window.addEventListener('touchstart', markUserInteraction, { once: true, capture: true });
+                // Fuerza explícitamente el error de autoplay en todos los medios de ingreso
+                function forceAutoplayBlock() {
+                    setTimeout(() => {
+                        document.querySelectorAll('audio').forEach(audio => {
+                            try {
+                                audio.muted = true;
+                                audio.pause();
+                                audio.currentTime = 0;
+                                audio.play().catch(e => {
+                                    console.log('[DEBUG] Autoplay block forced:', audio.src, e.name, e.message);
+                                });
+                            } catch(e){}
+                        });
+                        for (const id in activeAudios) {
+                            if (activeAudios[id] && activeAudios[id].player) {
+                                try {
+                                    const player = activeAudios[id].player;
+                                    player.muted = true;
+                                    player.pause();
+                                    player.currentTime = 0;
+                                    player.play().catch(e => {
+                                        console.log('[DEBUG] Autoplay block forced (activeAudios):', player.src, e.name, e.message);
+                                    });
+                                } catch(e){}
+                            }
+                        }
+                    }, 200);
+                }
+                forceAutoplayBlock();
+                window.addEventListener('pageshow', forceAutoplayBlock);
+            // Refuerza: en cada ingreso nuevo, fuerza mute y pausa de todos los sonidos y elimina cualquier intento de restauración automática
+            window.addEventListener('pageshow', function() {
+                for (const id in activeAudios) {
+                    if (activeAudios[id] && activeAudios[id].player) {
+                        try {
+                            activeAudios[id].player.pause();
+                            activeAudios[id].player.currentTime = 0;
+                            activeAudios[id].player.muted = true;
+                            console.log('[DEBUG] pageshow: mute/pause', id, activeAudios[id].player.src, activeAudios[id].player.paused, activeAudios[id].player.muted);
+                        } catch(e){}
+                    }
+                }
+                activeAudios = {};
+                document.querySelectorAll('audio').forEach(audio => {
+                    try {
+                        audio.pause();
+                        audio.currentTime = 0;
+                        audio.muted = true;
+                        console.log('[DEBUG] pageshow: mute/pause <audio>', audio.src, audio.paused, audio.muted);
+                    } catch(e){}
+                });
+            });
+        // Solución definitiva: fuerza mute y pausa de todos los sonidos antes de cualquier inicialización
+        for (const id in activeAudios) {
+            if (activeAudios[id] && activeAudios[id].player) {
+                try {
+                    activeAudios[id].player.pause();
+                    activeAudios[id].player.currentTime = 0;
+                    activeAudios[id].player.muted = true;
+                    console.log('[DEBUG] DOMContentLoaded: mute/pause', id, activeAudios[id].player.src, activeAudios[id].player.paused, activeAudios[id].player.muted);
+                } catch(e){}
+            }
+        }
+        activeAudios = {};
+        document.querySelectorAll('audio').forEach(audio => {
+            try {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.muted = true;
+                console.log('[DEBUG] DOMContentLoaded: mute/pause <audio>', audio.src, audio.paused, audio.muted);
+            } catch(e){}
+        });
+
         (function init() {
+            // Solución definitiva: limpiar y pausar todos los audios antes de restaurar sonidos
+            for (const id in activeAudios) {
+                if (activeAudios[id] && activeAudios[id].player) {
+                    try {
+                        activeAudios[id].player.pause();
+                        activeAudios[id].player.currentTime = 0;
+                        activeAudios[id].player.muted = true;
+                        console.log('[DEBUG] init(): mute/pause', id, activeAudios[id].player.src, activeAudios[id].player.paused, activeAudios[id].player.muted);
+                    } catch(e){}
+                }
+            }
+            activeAudios = {};
+            document.querySelectorAll('audio').forEach(audio => {
+                try {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.muted = true;
+                    console.log('[DEBUG] init(): mute/pause <audio>', audio.src, audio.paused, audio.muted);
+                } catch(e){}
+            });
+
+            // Forzar silencio global al iniciar
+            isMutedGlobally = true;
+            if (soundIndicator) {
+                soundIndicator.classList.add('muted');
+                soundIndicator.setAttribute('aria-pressed', 'true');
+            }
+            $$('audio').forEach(audio => {
+                audio.muted = true;
+            });
+
             renderCalendar(calendarDate);
             renderSoundList();
             loadFondosGlobalBlobs(); // Solo cargar desde base de datos
@@ -1575,23 +1866,226 @@ function loadFondosGlobalBlobs() {
         }
     }
 
-    //  Restaurar sonidos
-    function restoreActiveSounds() {
-        const activeIds = JSON.parse(localStorage.getItem('zen_active_sounds') || '[]');
-        // soundsData es tu variable original con la lista de sonidos
-        if(typeof soundsData !== 'undefined') {
-            activeIds.forEach(id => {
-                // Si el sonido ya está sonando, lo ignoramos
-                if (activeAudios && activeAudios[id]) return;
-
-                const sound = soundsData.find(s => s.id === id);
-                if (sound) {
-                    // Llamamos a tu función original toggleSound
-                    // Nota: Asegúrate que tu función toggleSound acepte estos 3 parámetros
-                    toggleSound(id, sound.name, sound.file);
-                }
-            });
-        }
-    }
+    //  Restaurar sonidos (deshabilitado: no restaurar sonidos activos automáticamente)
+    // function restoreActiveSounds() {} // NO restaurar sonidos automáticamente
     // --- [FIN] BLOQUE DE MEMORIA ---
+
+    // --- Fondo de Usuario: Carga dinámica y subida al servidor ---
+    const uploadBackgroundBtn = document.getElementById('upload-background-btn');
+    const backgroundFileInput = document.getElementById('background-file-input');
+    const deleteUserBackgroundBtn = document.getElementById('delete-user-background-btn');
+    let currentUserBackgroundId = null; // ID del fondo de usuario actualmente aplicado
+
+    if (uploadBackgroundBtn && backgroundFileInput) {
+        uploadBackgroundBtn.addEventListener('click', () => backgroundFileInput.click());
+        backgroundFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!['video/mp4', 'image/gif', 'image/png', 'image/jpeg'].includes(file.type)) {
+                alert('Solo se permiten archivos MP4, GIF, PNG o JPG.');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('background', file);
+            fetch('subirFondoUsuario.php', { method: 'POST', body: formData })
+                .then(async r => {
+                    const raw = await r.text();
+                    let data;
+                    try { data = JSON.parse(raw); } catch (e) {
+                        console.error('[UPLOAD][DEBUG] Fallo parse JSON. Raw respuesta:', raw);
+                        alert('Respuesta no válida del servidor (ver consola).');
+                        return;
+                    }
+                    if (data.success) {
+                        console.log('[UPLOAD] Fondo usuario subido OK', data);
+                        loadUserBackgrounds();
+                        loadFondosGlobalBlobs();
+                        showToast('Fondo subido exitosamente');
+                    } else {
+                        alert('Error al subir el fondo: ' + (data.message || 'Sin mensaje.'));
+                        console.warn('[UPLOAD] Error data:', data);
+                    }
+                })
+                .catch(err => {
+                    console.error('[UPLOAD] Error de red/fetch:', err);
+                    alert('Error de red al subir el fondo (ver consola).');
+                });
+        });
+    }
+
+    // Galería de fondos del usuario (simple listado por nombre)
+    function cargarFondosUsuarioListado() {
+        const userBackgroundGallery = document.getElementById('user-background-gallery');
+        if (!userBackgroundGallery) return;
+        fetch('obtenerFondosUsuario.php')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    console.warn('Error al cargar lista fondos usuario:', data.message);
+                    return;
+                }
+                userBackgroundGallery.innerHTML = '';
+                data.fondos.forEach(fondo => {
+                    const fondoItem = document.createElement('div');
+                    fondoItem.className = 'fondo-item';
+                    fondoItem.textContent = fondo.nombre;
+                    userBackgroundGallery.appendChild(fondoItem);
+                });
+            })
+            .catch(err => console.error('Error listado fondos usuario:', err));
+    }
+
+    // Versión con miniaturas clicables para aplicar como fondo
+    function loadUserBackgrounds() {
+        const gallery = document.getElementById('user-background-gallery');
+        if (!gallery) return;
+        fetch('obtenerFondosUsuario.php')
+            .then(resp => resp.ok ? resp.json() : Promise.reject('Respuesta HTTP inválida'))
+            .then(data => {
+                if (!data.success) {
+                    console.warn('Error respuesta fondos usuario:', data.message);
+                    return;
+                }
+                gallery.innerHTML = '';
+                data.fondos.forEach(fondo => {
+                    const nombre = fondo.nombre || 'Fondo';
+                    const url = fondo.url || `verFondoUsuario.php?id=${fondo.id}`;
+                    const mime = fondo.mime || 'image/gif';
+                    const isVideo = mime.startsWith('video');
+
+                    const item = document.createElement('div');
+                    item.className = 'background-item';
+                    item.dataset.bgFile = url;
+                    item.dataset.bgType = mime;
+
+                    if (isVideo) {
+                        const video = document.createElement('video');
+                        video.src = url;
+                        video.muted = true;
+                        video.loop = true;
+                        video.autoplay = true;
+                        video.playsInline = true;
+                        item.appendChild(video);
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.alt = nombre;
+                        img.loading = 'lazy';
+                        item.appendChild(img);
+                    }
+
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'background-name';
+                    nameDiv.textContent = nombre.replace(/\.(mp4|gif|png|jpe?g)$/i,'');
+                    item.appendChild(nameDiv);
+
+                    // Guardar id para eliminación futura
+                    item.dataset.userBgId = fondo.id;
+                    item.addEventListener('click', () => {
+                        applyBackground(item.dataset.bgFile, item.dataset.bgType);
+                        localStorage.setItem('zen_active_background', JSON.stringify({ file: item.dataset.bgFile, type: item.dataset.bgType, userBgId: fondo.id, scope: 'user' }));
+                        currentUserBackgroundId = fondo.id;
+                        if (deleteUserBackgroundBtn) deleteUserBackgroundBtn.disabled = false;
+                        showToast('Fondo aplicado');
+                    });
+
+                    gallery.appendChild(item);
+                });
+            })
+            .catch(err => console.error('Error al cargar fondos usuario:', err));
+    }
+
+    // Lanzar carga inicial tras DOM listo si existe contenedor
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarFondosUsuarioListado();
+        loadUserBackgrounds();
+    });
+
+    // Eliminar fondo de usuario seleccionado
+    if (deleteUserBackgroundBtn) {
+        deleteUserBackgroundBtn.addEventListener('click', async () => {
+            if (!currentUserBackgroundId) return;
+            if (!confirm('¿Eliminar el fondo de usuario seleccionado?')) return;
+            try {
+                const resp = await fetch('eliminarFondoUsuario.php', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: new URLSearchParams({ id: String(currentUserBackgroundId) })
+                });
+                const data = await resp.json().catch(() => ({ success:false, message:'Respuesta inválida'}));
+                if (!data.success) {
+                    showToast('No se pudo eliminar');
+                    return;
+                }
+                // Si el fondo eliminado era el activo, limpiar
+                const saved = localStorage.getItem('zen_active_background');
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        if (parsed.userBgId == currentUserBackgroundId) {
+                            localStorage.removeItem('zen_active_background');
+                            const bgC = document.getElementById('background-container');
+                            if (bgC) { bgC.style.backgroundImage='none'; bgC.innerHTML=''; }
+                        }
+                    } catch(e){}
+                }
+                // Quitar elemento de la galería
+                const gallery = document.getElementById('user-background-gallery');
+                if (gallery) {
+                    const el = gallery.querySelector(`[data-user-bg-id="${currentUserBackgroundId}"]`);
+                    if (el) el.remove();
+                }
+                currentUserBackgroundId = null;
+                deleteUserBackgroundBtn.disabled = true;
+                showToast('Fondo eliminado');
+                // Recargar lista para mantener consistencia
+                loadUserBackgrounds();
+            } catch (err) {
+                console.error('Error eliminando fondo usuario:', err);
+                showToast('Error al eliminar');
+            }
+        });
+    }
+
+    // Al aplicar un fondo global, desactivar botón de eliminar
+    function markGlobalBackgroundSelection() {
+        currentUserBackgroundId = null;
+        if (deleteUserBackgroundBtn) deleteUserBackgroundBtn.disabled = true;
+    }
+    // Reasignar también en selección global
+    const originalReassign = reassignBackgroundEvents;
+    reassignBackgroundEvents = function() {
+        originalReassign();
+        const gallery = document.querySelector('#background-gallery');
+        if (!gallery) return;
+        gallery.addEventListener('click', markGlobalBackgroundSelection, true);
+    };
+
+    // Utilidad simple para avisos flotantes
+    function showToast(msg, duration = 2500) {
+        let container = document.getElementById('zen-toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'zen-toast-container';
+            Object.assign(container.style, {
+                position: 'fixed', bottom: '1.25rem', right: '1.25rem', display: 'flex', flexDirection: 'column', gap: '.5rem', zIndex: '9999'
+            });
+            document.body.appendChild(container);
+        }
+        const toast = document.createElement('div');
+        toast.textContent = msg;
+        Object.assign(toast.style, {
+            background: 'var(--clr-bg-panel, rgba(0,0,0,0.8))', color: 'var(--clr-text, #fff)', padding: '.6rem .9rem', borderRadius: '.6rem', boxShadow: '0 3px 10px rgba(0,0,0,.25)', fontSize: '.85rem', opacity: '0', transform: 'translateY(6px)', transition: 'opacity .25s, transform .25s'
+        });
+        container.appendChild(toast);
+        requestAnimationFrame(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+        });
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(6px)';
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
 })();

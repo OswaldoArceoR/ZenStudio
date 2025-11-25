@@ -8,6 +8,34 @@
     const $ = (sel) => document.querySelector(sel);
     const avatarImg = $('#profile-avatar-img');
     const avatarUploadInput = $('#avatar-upload-input');
+
+    // --- Subida de avatar ---
+    if (avatarUploadInput) {
+        avatarUploadInput.addEventListener('change', function() {
+            const file = avatarUploadInput.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('avatar', file);
+            fetch('actualizarPerfil.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(async res => {
+                try {
+                    const data = await res.json();
+                    if (data.status === 'ok' && data.avatar) {
+                        avatarImg.src = data.avatar + '?t=' + Date.now();
+                        alert('Avatar actualizado con éxito.');
+                    } else {
+                        alert(data.msg || 'Error al actualizar avatar.');
+                    }
+                } catch (e) {
+                    alert('Error inesperado: la respuesta no es JSON válido.');
+                }
+            })
+            .catch((err) => alert('Error de red o formato: ' + err));
+        });
+    }
     const usernameInput = $('#username-input');
     const accountNameInput = $('#accountname-input');
     const emailInput = $('#email-input');
