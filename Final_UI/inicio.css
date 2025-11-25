@@ -1,0 +1,178 @@
+/* Estilos para la nueva página de bienvenida (inicio.html) */
+
+/* Reset y configuración base */
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    /* Usamos las variables de tu styles.css para que el tema funcione */
+    background-color: var(--clr-background);
+    color: var(--clr-text);
+    scroll-behavior: smooth;
+    /* Fondo degradado más sutil y dinámico */
+    background-image: radial-gradient(ellipse at top, var(--clr-panel), var(--clr-background) 70%);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Posicionamos el botón de tema que añadimos en el HTML */
+.theme-toggle-btn {
+    position: fixed;
+    top: 20px;
+    left: 10px;
+    z-index: 100;
+    /* Reutilizamos el estilo de .sidebar-btn para consistencia */
+    width: 50px; height: 50px; border-radius: 12px; background: var(--clr-panel); border: 1px solid var(--clr-border); cursor: pointer; color: var(--clr-text-muted);
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(10px);
+    transition: color .18s, background .18s, transform .18s, box-shadow .18s;
+}
+
+/* Sección Hero (pantalla completa) */
+.landing-hero {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    flex-direction: column;
+    padding: 20px;
+}
+
+/* Animación de entrada para el contenido */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.landing-hero__content h1 {
+    font-size: clamp(3.5rem, 8vw, 6rem);
+    margin: 0 0 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.landing-hero__content p {
+    font-size: clamp(1.1rem, 2.5vw, 1.25rem);
+    color: var(--clr-text-muted);
+    margin: 0 0 40px;
+    max-width: 600px;
+    opacity: 0;
+    animation: fadeInUp 0.8s ease-out 0.2s forwards;
+}
+
+.landing-hero__scroll-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--clr-text-muted);
+    cursor: pointer;
+    animation: bounce 2s infinite;
+    opacity: 0;
+    animation: fadeInUp 0.8s ease-out 0.4s forwards, bounce 2s 1.2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+/* Nueva sección "Acerca de" */
+.about-section {
+    padding: 80px 20px;
+    background-color: var(--clr-background);
+}
+
+.about-section__container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 40px;
+}
+
+.about-section__image-container {
+    flex: 1;
+    max-width: 50%;
+}
+
+.about-section__image-container img {
+    width: 100%;
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.about-section__text-container {
+    flex: 1;
+}
+
+.about-section__text-container h2 {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+}
+
+.about-section__text-container p {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: var(--clr-text-muted);
+}
+
+/* Sección de acciones (botones) */
+.landing-actions-section {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+.landing-actions__container {
+    text-align: center;
+}
+
+.landing-actions__title {
+    font-size: 2rem;
+    margin: 0 0 25px;
+}
+
+.landing-actions__button {
+    display: inline-block;
+    padding: 14px 32px;
+    margin: 0 10px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: 1.05rem;
+    font-weight: 600;
+    border: 1px solid var(--clr-border);
+    background: var(--clr-panel);
+    color: var(--clr-text);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.landing-actions__button:hover {
+    background: var(--clr-hover);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.landing-actions__button--secondary {
+    background: var(--clr-primary);
+    color: #fff;
+    border-color: transparent;
+}
+
+.landing-actions__button--secondary:hover {
+    background: color-mix(in srgb, var(--clr-primary) 85%, black);
+}
+
+/* Media query para hacer la sección "Acerca de" responsive */
+@media (max-width: 768px) {
+    .about-section__container {
+        flex-direction: column;
+    }
+    .about-section__image-container {
+        max-width: 100%;
+    }
+}
