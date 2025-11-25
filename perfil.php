@@ -7,11 +7,15 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Datos del usuario desde sesión
-$username = $_SESSION['username'];
-$nombre = $_SESSION['nombre'];
-$email = $_SESSION['email'];
-$avatar = $_SESSION['avatar'];
+// Obtener datos actualizados del usuario desde la base de datos
+require_once __DIR__ . '/INCLUDES/conexion.php';
+$user_id = $_SESSION['user_id'];
+$stmt = $conexion->prepare("SELECT username, nombre, email, avatar FROM usuarios WHERE id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$stmt->bind_result($username, $nombre, $email, $avatar);
+$stmt->fetch();
+$stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="es">

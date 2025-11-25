@@ -47,11 +47,24 @@ function setCookie(name, value, days) {
     // In-memory state
     let activeAudios = {};
     let tasks = JSON.parse(localStorage.getItem(LS.TASKS) || 'null') || [{ text: "Crear estructura inicial del proyecto", completed: true }];
-    let isMutedGlobally = false;
+    let isMutedGlobally = true;
     let eventsByDate = JSON.parse(localStorage.getItem(LS.EVENTS) || '{}');
     let panelPositions = JSON.parse(localStorage.getItem(LS.POS) || '{}');
     let panelSizes = JSON.parse(localStorage.getItem(LS.SIZES) || '{}');
     let pendingSoundFile = null;
+    // --- Solo reproducir sonidos tras click explícito en el botón play/pause de cada sonido ---
+    window.__zenstudio_user_interacted = false;
+    function setUserInteracted() {
+        window.__zenstudio_user_interacted = true;
+        document.removeEventListener('pointerdown', setUserInteracted, true);
+        document.removeEventListener('keydown', setUserInteracted, true);
+    }
+    // Solo marcar interacción si el click es en un botón de play/pause de sonido
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.sound-toggle-btn')) {
+            setUserInteracted();
+        }
+    }, true);
 
     // Setup theme from localStorage
     (() => {
@@ -744,6 +757,50 @@ function loadFondosGlobalBlobs() {
     // --- Cargar sonidos globales desde la base de datos al iniciar ---
     document.addEventListener('DOMContentLoaded', function() {
         loadGlobalSoundsBlobs();
+        // Silencio inmediato y refuerzo posterior (sin espera audible)
+        forceMuteAllAudios();
+        setTimeout(forceMuteAllAudios, 600);
+    });
+
+    // --- Utilidad central para pausar y mutear todo ---
+    function forceMuteAllAudios() {
+        try {
+            const audios = document.querySelectorAll('audio');
+            audios.forEach(a => {
+                a.pause();
+                a.currentTime = 0;
+                a.muted = true;
+            });
+        } catch(e) {}
+        for (const id in activeAudios) {
+            const obj = activeAudios[id];
+            if (obj && obj.player) {
+                try {
+                    obj.player.pause();
+                    obj.player.currentTime = 0;
+                    obj.player.muted = true;
+                } catch(e) {}
+            }
+        }
+    }
+
+    // Asegurar silencio al ocultar la página (cambio de pestaña / navegación a otra vista)
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            forceMuteAllAudios();
+        }
+    });
+
+    // Silenciar justo antes de descargar la página (navegar a perfil, cerrar pestaña, etc.)
+    window.addEventListener('beforeunload', () => {
+        forceMuteAllAudios();
+    });
+
+    // pageshow: cuando se vuelve desde bfcache (historial atrás) o navegación con historial
+    window.addEventListener('pageshow', (e) => {
+        forceMuteAllAudios();
+        activeAudios = {}; // limpiar referencias para evitar reactivación involuntaria
+        resetAmbientUI();
     });
 
     function setGlobalMute(muted) {
@@ -782,36 +839,43 @@ function loadFondosGlobalBlobs() {
     function toggleSound(id, name, file) {
         // Si ya existe, usar la misma instancia
         if (!activeAudios[id]) {
-            // Si existe un audio previo con ese id, pausarlo y eliminarlo
             if (activeAudios[id] && activeAudios[id].player) {
                 try { activeAudios[id].player.pause(); } catch(e){}
                 delete activeAudios[id];
             }
-            // Crear solo una instancia Audio por sonido
             const audio = new Audio(file);
-            audio.loop = false; // No loop por defecto
+            audio.loop = false;
             const soundItemUI = soundListContainer.querySelector(`[data-sound-id="${id}"]`);
             const slider = soundItemUI?.querySelector('.volume-slider');
             audio.volume = slider ? parseFloat(slider.value) : 0.5;
-            audio.muted = isMutedGlobally;
+            audio.muted = true;
             activeAudios[id] = { player: audio, name, file };
         }
 
         const soundInfo = activeAudios[id];
         const player = soundInfo.player;
 
+        if (!window.__zenstudio_user_interacted) {
+            console.log(`[DEBUG] Ignorado play/pause de '${name}' porque el usuario no ha interactuado`);
+            updateSoundItemUI(id);
+            return;
+        }
+
         if (player.paused) {
-            player.loop = true; // Solo hacer loop cuando el usuario da play
+            player.loop = true;
+            player.muted = false;
+            console.log(`[DEBUG] Intentando reproducir '${name}'`);
             player.play().catch(e => {
-                // Si es NotSupportedError, limpiar la instancia
                 if (e.name === 'NotSupportedError') {
                     delete activeAudios[id];
                 }
-                console.error(`Error al reproducir ${name}:`, e);
+                console.error(`[DEBUG] Error al reproducir ${name}:`, e);
             });
         } else {
             player.pause();
             player.loop = false;
+            player.muted = true;
+            console.log(`[DEBUG] Pausado y muteado '${name}'`);
         }
 
         updateSoundItemUI(id);
@@ -861,6 +925,8 @@ function loadFondosGlobalBlobs() {
             if (activeAudios[sound.id] && activeAudios[sound.id].player) activeAudios[sound.id].player.volume = v;
         });
         container.appendChild(volGroup);
+        // Ocultar el control de volumen hasta que el sonido esté realmente reproduciéndose
+        volGroup.style.display = 'none';
         
         container.dataset.soundId = sound.id;
 
@@ -889,9 +955,57 @@ function loadFondosGlobalBlobs() {
 
     function renderSoundList() {
         if (!soundListContainer) return;
+        // Limpiar todos los audios activos antes de renderizar la lista
+        for (const id in activeAudios) {
+            if (activeAudios[id] && activeAudios[id].player) {
+                try {
+                    activeAudios[id].player.pause();
+                    activeAudios[id].player.currentTime = 0;
+                    activeAudios[id].player.muted = true;
+                    console.log('[DEBUG] renderSoundList: mute/pause', id, activeAudios[id].player.src, activeAudios[id].player.paused, activeAudios[id].player.muted);
+                } catch(e){}
+            }
+        }
+        activeAudios = {};
+
         soundListContainer.innerHTML = '';
         // soundsData ya contiene globales + usuario
         soundsData.forEach(s => soundListContainer.appendChild(createSoundItem(s)));
+
+        // Refuerza la pausa y mute de todos los sonidos cada vez que se renderiza la lista
+        setTimeout(() => {
+            for (const id in activeAudios) {
+                if (activeAudios[id] && activeAudios[id].player) {
+                    try {
+                        activeAudios[id].player.pause();
+                        activeAudios[id].player.currentTime = 0;
+                        activeAudios[id].player.muted = true;
+                        console.log('[DEBUG] renderSoundList (timeout): mute/pause', id, activeAudios[id].player.src, activeAudios[id].player.paused, activeAudios[id].player.muted);
+                    } catch(e){}
+                }
+            }
+            document.querySelectorAll('audio').forEach(audio => {
+                try {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.muted = true;
+                    console.log('[DEBUG] renderSoundList (timeout): mute/pause <audio>', audio.src, audio.paused, audio.muted);
+                } catch(e){}
+            });
+            resetAmbientUI();
+        }, 300);
+    }
+
+    // Asegura que la UI de sonidos muestre todo como detenido/silencioso
+    function resetAmbientUI() {
+        if (!soundListContainer) return;
+        soundListContainer.querySelectorAll('.sound-item').forEach(item => {
+            item.classList.remove('playing');
+            const btn = item.querySelector('.sound-toggle-btn');
+            if (btn) btn.innerHTML = playSVG();
+            const vol = item.querySelector('.volume-control-group');
+            if (vol) vol.style.display = 'none';
+        });
     }
 
     // --- Funcionalidad de subida y borrado de sonidos ---
@@ -1070,7 +1184,10 @@ function loadFondosGlobalBlobs() {
         const track = localPlaylistFiles[index];
         localPlayer.src = URL.createObjectURL(track);
         localPlayer.muted = isMutedGlobally;
-        localPlayer.play();
+        // Solo reproducir si hay interacción del usuario
+        if (window.__zenstudio_user_interacted) {
+            localPlayer.play();
+        }
         trackTitle.textContent = track.name.replace(/\.[^/.]+$/, "");
         playBtn.innerHTML = pauseSVG();
         updatePlaylistUI();
@@ -1079,7 +1196,9 @@ function loadFondosGlobalBlobs() {
     function togglePlayPause() {
         if (localPlayer.src) {
             if (localPlayer.paused) {
-                localPlayer.play();
+                if (window.__zenstudio_user_interacted) {
+                    localPlayer.play();
+                }
                 playBtn.innerHTML = pauseSVG();
             } else {
                 localPlayer.pause();
@@ -1176,7 +1295,9 @@ function loadFondosGlobalBlobs() {
                 const completeSound = new Audio('task-complete.mp3');
                 completeSound.volume = 0.3;
                 completeSound.muted = isMutedGlobally;
-                completeSound.play().catch(err => console.log("No se pudo reproducir sonido.", err));
+                if (window.__zenstudio_user_interacted) {
+                    completeSound.play().catch(err => console.log("No se pudo reproducir sonido.", err));
+                }
             }
             renderTasks();
             saveTasks();
@@ -1500,7 +1621,130 @@ function loadFondosGlobalBlobs() {
 
     // ---------- Init ----------
     document.addEventListener('DOMContentLoaded', () => {
+                        // Solo marcar interacción si el usuario da clic en los botones de play/pause
+                        window.__zenstudio_user_interacted = false;
+                        function markUserInteraction() { window.__zenstudio_user_interacted = true; }
+                        document.body.addEventListener('click', function(e) {
+                            // Botón play/pause de sonidos ambientales
+                            if (e.target.closest('.sound-toggle-btn')) {
+                                markUserInteraction();
+                            }
+                            // Botón play/pause del reproductor local
+                            if (e.target.closest('#local-player-play')) {
+                                markUserInteraction();
+                            }
+                        }, true);
+                    // Marcar que el usuario ha interactuado tras cualquier clic, teclado o touch
+                    window.__zenstudio_user_interacted = false;
+                    function markUserInteraction() { window.__zenstudio_user_interacted = true; }
+                    window.addEventListener('click', markUserInteraction, { once: true, capture: true });
+                    window.addEventListener('keydown', markUserInteraction, { once: true, capture: true });
+                    window.addEventListener('touchstart', markUserInteraction, { once: true, capture: true });
+                // Fuerza explícitamente el error de autoplay en todos los medios de ingreso
+                function forceAutoplayBlock() {
+                    setTimeout(() => {
+                        document.querySelectorAll('audio').forEach(audio => {
+                            try {
+                                audio.muted = true;
+                                audio.pause();
+                                audio.currentTime = 0;
+                                audio.play().catch(e => {
+                                    console.log('[DEBUG] Autoplay block forced:', audio.src, e.name, e.message);
+                                });
+                            } catch(e){}
+                        });
+                        for (const id in activeAudios) {
+                            if (activeAudios[id] && activeAudios[id].player) {
+                                try {
+                                    const player = activeAudios[id].player;
+                                    player.muted = true;
+                                    player.pause();
+                                    player.currentTime = 0;
+                                    player.play().catch(e => {
+                                        console.log('[DEBUG] Autoplay block forced (activeAudios):', player.src, e.name, e.message);
+                                    });
+                                } catch(e){}
+                            }
+                        }
+                    }, 200);
+                }
+                forceAutoplayBlock();
+                window.addEventListener('pageshow', forceAutoplayBlock);
+            // Refuerza: en cada ingreso nuevo, fuerza mute y pausa de todos los sonidos y elimina cualquier intento de restauración automática
+            window.addEventListener('pageshow', function() {
+                for (const id in activeAudios) {
+                    if (activeAudios[id] && activeAudios[id].player) {
+                        try {
+                            activeAudios[id].player.pause();
+                            activeAudios[id].player.currentTime = 0;
+                            activeAudios[id].player.muted = true;
+                            console.log('[DEBUG] pageshow: mute/pause', id, activeAudios[id].player.src, activeAudios[id].player.paused, activeAudios[id].player.muted);
+                        } catch(e){}
+                    }
+                }
+                activeAudios = {};
+                document.querySelectorAll('audio').forEach(audio => {
+                    try {
+                        audio.pause();
+                        audio.currentTime = 0;
+                        audio.muted = true;
+                        console.log('[DEBUG] pageshow: mute/pause <audio>', audio.src, audio.paused, audio.muted);
+                    } catch(e){}
+                });
+            });
+        // Solución definitiva: fuerza mute y pausa de todos los sonidos antes de cualquier inicialización
+        for (const id in activeAudios) {
+            if (activeAudios[id] && activeAudios[id].player) {
+                try {
+                    activeAudios[id].player.pause();
+                    activeAudios[id].player.currentTime = 0;
+                    activeAudios[id].player.muted = true;
+                    console.log('[DEBUG] DOMContentLoaded: mute/pause', id, activeAudios[id].player.src, activeAudios[id].player.paused, activeAudios[id].player.muted);
+                } catch(e){}
+            }
+        }
+        activeAudios = {};
+        document.querySelectorAll('audio').forEach(audio => {
+            try {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.muted = true;
+                console.log('[DEBUG] DOMContentLoaded: mute/pause <audio>', audio.src, audio.paused, audio.muted);
+            } catch(e){}
+        });
+
         (function init() {
+            // Solución definitiva: limpiar y pausar todos los audios antes de restaurar sonidos
+            for (const id in activeAudios) {
+                if (activeAudios[id] && activeAudios[id].player) {
+                    try {
+                        activeAudios[id].player.pause();
+                        activeAudios[id].player.currentTime = 0;
+                        activeAudios[id].player.muted = true;
+                        console.log('[DEBUG] init(): mute/pause', id, activeAudios[id].player.src, activeAudios[id].player.paused, activeAudios[id].player.muted);
+                    } catch(e){}
+                }
+            }
+            activeAudios = {};
+            document.querySelectorAll('audio').forEach(audio => {
+                try {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.muted = true;
+                    console.log('[DEBUG] init(): mute/pause <audio>', audio.src, audio.paused, audio.muted);
+                } catch(e){}
+            });
+
+            // Forzar silencio global al iniciar
+            isMutedGlobally = true;
+            if (soundIndicator) {
+                soundIndicator.classList.add('muted');
+                soundIndicator.setAttribute('aria-pressed', 'true');
+            }
+            $$('audio').forEach(audio => {
+                audio.muted = true;
+            });
+
             renderCalendar(calendarDate);
             renderSoundList();
             loadFondosGlobalBlobs(); // Solo cargar desde base de datos
@@ -1575,23 +1819,7 @@ function loadFondosGlobalBlobs() {
         }
     }
 
-    //  Restaurar sonidos
-    function restoreActiveSounds() {
-        const activeIds = JSON.parse(localStorage.getItem('zen_active_sounds') || '[]');
-        // soundsData es tu variable original con la lista de sonidos
-        if(typeof soundsData !== 'undefined') {
-            activeIds.forEach(id => {
-                // Si el sonido ya está sonando, lo ignoramos
-                if (activeAudios && activeAudios[id]) return;
-
-                const sound = soundsData.find(s => s.id === id);
-                if (sound) {
-                    // Llamamos a tu función original toggleSound
-                    // Nota: Asegúrate que tu función toggleSound acepte estos 3 parámetros
-                    toggleSound(id, sound.name, sound.file);
-                }
-            });
-        }
-    }
+    //  Restaurar sonidos (deshabilitado: no restaurar sonidos activos automáticamente)
+    // function restoreActiveSounds() {} // NO restaurar sonidos automáticamente
     // --- [FIN] BLOQUE DE MEMORIA ---
 })();
