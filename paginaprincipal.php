@@ -1,21 +1,17 @@
 <?php
 session_start();
-
+ 
 // Verificar si el usuario está logueado
 if (!isset($_SESSION['user_id'])) {
     header("Location: inicioSesion.php");
     exit();
 }
 
-// Obtener datos actualizados del usuario desde la base de datos
-require_once __DIR__ . '/INCLUDES/conexion.php';
-$user_id = $_SESSION['user_id'];
-$stmt = $conexion->prepare("SELECT username, nombre, email, avatar FROM usuarios WHERE id = ?");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$stmt->bind_result($username, $nombre, $email, $avatar);
-$stmt->fetch();
-$stmt->close();
+// Datos del usuario desde sesión
+$username = $_SESSION['username'];
+$nombre = $_SESSION['nombre'];
+$email = $_SESSION['email'];
+$avatar = $_SESSION['avatar'];
 ?>
 <!DOCTYPE html>
 <html lang="es" data-theme="light">
@@ -322,7 +318,13 @@ $stmt->close();
                     Subir Sonido Propio
                 </button>
                 <input type="file" id="sound-file-input" name="sound-file-input" style="display:none;" accept="audio/*">
-            </section>
+                <button id="toggle-user-sounds-btn" class="action-btn secondary-btn" style="width:100%; margin-top:10px;">
+                    Mostrar Sonidos del Usuario
+                </button>
+                <div id="user-sounds-section" style="display:none; margin-top:12px;">
+                    <h3 style="margin:4px 0;">Mis Sonidos Subidos</h3>
+                    <button id="refresh-user-sounds-btn" class="action-btn tertiary-btn" style="width:100%; margin-bottom:8px;">Actualizar Lista</button>
+                    <div id="user-sound-list" class="sound-list"></div>
 
         </main>
 
@@ -371,30 +373,6 @@ $stmt->close();
             </div>
         </div>
 
-        <!-- Modal para nombrar sonido -->
-        <div id="name-sound-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="name-sound-modal-title" aria-hidden="true">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 id="name-sound-modal-title">Nombrar Nuevo Sonido</h3>
-                    <button class="close-modal-btn" data-target="name-sound-modal" aria-label="Cerrar diálogo">
-                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="new-sound-name-input">Nombre del Sonido</label>
-                        <div class="input-with-icon">
-                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2V15H6L11 19V5Z"></path></svg>
-                            <input type="text" id="new-sound-name-input" name="new-sound-name-input" placeholder="Ej: Lluvia en el bosque" aria-label="Nombre del nuevo sonido">
-                        </div>
-                    </div>
-                    <div class="modal-actions">
-                        <button id="save-sound-name-btn" class="action-btn primary-btn">Guardar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Panel de Fondos Animados -->
         <section id="content-spaces" class="floating-panel" style="left: 350px; top: 80px; width: 420px;" aria-hidden="true">
             <div class="panel-handle">
@@ -410,9 +388,24 @@ $stmt->close();
             <div class="modal-actions" style="margin-top: 15px;">
                 <button id="clear-background-btn" class="action-btn secondary-btn">Quitar Fondo</button>
             </div>
+            <div class="panel-handle">
+                <h2>Fondos del Usuario</h2>
+            </div>
+            <p class="panel-info">Selecciona un fondo subido por ti para personalizar tu espacio de trabajo.</p>
+            <div id="user-background-gallery" class="background-gallery">
+                <!-- Los fondos del usuario se añadirán aquí desde JS -->
+            </div>
+            <!-- Botón para subir fondo animado propio -->
+            <div class="upload-background-btn-container">
+
+                <button id="upload-background-btn" class="action-btn secondary-btn">Subir Fondo Animado</button>
+                <input type="file" id="background-file-input" accept="image/gif, video/mp4" style="display: none;">
+            </div>
         </section>
+
     </div>
 
     <script src="JS/principal.js"></script>
+    
 </body>
 </html>
