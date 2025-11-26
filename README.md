@@ -18,7 +18,7 @@ ZenStudio es una aplicación web diseñada para mejorar tu flujo de trabajo medi
 
 ##  Características Principales
 
-* ** Sistema de Usuarios:** Registro y autenticación segura (`registro.html`, `inicioSesion.php`).
+* **Sistema de Usuarios:** Registro y autenticación segura (`registro.html`, `inicioSesion.php`).
 * **Persistencia en Base de Datos:** Toda tu configuración, tareas y notas se guardan en una base de datos SQL, permitiendo acceder a tu cuenta desde cualquier dispositivo.
 - **Temporizador Pomodoro**: Totalmente personalizable y con notificaciones visuales para gestionar tus ciclos de trabajo y descanso.
 - **Mezclador de Sonidos Ambientales:**
