@@ -40,11 +40,7 @@ const AboutSection = () => {
         <section className="about-section">
             <div className="about-section__container">
                 <div className="about-section__image-container">
-<<<<<<< HEAD
-                    <img src="IMAGENES/ZenStudioLogo.png" alt="Vista previa de la aplicación ZenStudio" />
-=======
-                    <img src="../IMAGENES/Zenstudio.png" alt="Vista previa de la aplicación ZenStudio" />
->>>>>>> 1fabbdd (Commit de logos e imagenes)
+                    <img src="IMAGENES/zenstudio.png" alt="Vista previa de la aplicación ZenStudio" />
                 </div>
                 <div className="about-section__text-container">
                     <h2>¿Qué es ZenStudio?</h2>
