@@ -38,6 +38,8 @@ if (empty($avatar) || strtoupper($avatar) === 'NULL') {
     <link rel="stylesheet" href="../CSS/principalP1.css">
     <link rel="stylesheet" href="../CSS/principalP2.css">
     <link rel="stylesheet" href="../CSS/perfil.css">
+    <link rel="icon" type="image/png" href="../IMAGENES/ZenStudioLogo.png">
+    <link rel="apple-touch-icon" href="../IMAGENES/ZenStudioLogo.png">
 </head>
 <body>
 

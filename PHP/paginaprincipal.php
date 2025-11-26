@@ -42,7 +42,8 @@ if ($conexion) {
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
     <link rel="stylesheet" href="../CSS/principalP1.css">
     <link rel="stylesheet" href="../CSS/principalP2.css">
-    <link rel="icon" href=".../IMAGENES/ZenStudioLogo.png" type="image/png">
+    <link rel="icon" type="image/png" href="../IMAGENES/ZenStudioLogo.png">
+    <link rel="apple-touch-icon" href="../IMAGENES/ZenStudioLogo.png">
 </head>
 <body>
 
