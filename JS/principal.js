@@ -1250,9 +1250,9 @@ function loadFondosGlobalBlobs() {
     loadYoutubeBtn?.addEventListener('click', loadYoutubeVideo);
     youtubeUrlInput?.addEventListener('keydown', (e) => e.key === 'Enter' && loadYoutubeVideo());
 
-    // --- Pestaña 2: Archivos Locales ---
+    // --- Pestaña 2: Archivos Personales (guardados por usuario en servidor) ---
     const localPlayer = new Audio();
-    let localPlaylistFiles = [];
+    let serverMusicList = []; // {id, nombre, url, mime}
     let currentTrackIndex = -1;
 
     const playBtn = $('#local-player-play');
@@ -1264,17 +1264,35 @@ function loadFondosGlobalBlobs() {
     const uploadBtn = $('#upload-local-music-btn');
     const fileInput = $('#local-music-input');
 
+    async function loadServerMusic() {
+        try {
+            const res = await fetch('obtenerMusicaUsuario.php');
+            const data = await res.json();
+            if (data.success) {
+                serverMusicList = data.musica || [];
+                updatePlaylistUI();
+            }
+        } catch (e) { /* noop */ }
+    }
+
     function playTrack(index) {
-        if (index < 0 || index >= localPlaylistFiles.length) return;
+        if (index < 0 || index >= serverMusicList.length) return;
         currentTrackIndex = index;
-        const track = localPlaylistFiles[index];
-        localPlayer.src = URL.createObjectURL(track);
+        const track = serverMusicList[index];
+        // Asignar URL del stream (BLOB desde servidor)
+        localPlayer.src = track.url;
+        try { localPlayer.load(); } catch (_) {}
         localPlayer.muted = isMutedGlobally;
         // Solo reproducir si hay interacción del usuario
         if (window.__zenstudio_user_interacted) {
-            localPlayer.play();
+            const playPromise = localPlayer.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch(() => {
+                    // Si falla el autoplay/permiso, no hacemos nada; el usuario puede intentar de nuevo
+                });
+            }
         }
-        trackTitle.textContent = track.name.replace(/\.[^/.]+$/, "");
+        trackTitle.textContent = (track.nombre || '').replace(/\.[^/.]+$/, "");
         playBtn.innerHTML = pauseSVG();
         updatePlaylistUI();
     }
@@ -1290,17 +1308,17 @@ function loadFondosGlobalBlobs() {
                 localPlayer.pause();
                 playBtn.innerHTML = playSVG();
             }
-        } else if (localPlaylistFiles.length > 0) {
+        } else if (serverMusicList.length > 0) {
             playTrack(0);
         }
     }
 
     function updatePlaylistUI() {
         playlistEl.innerHTML = '';
-        localPlaylistFiles.forEach((file, index) => {
+        serverMusicList.forEach((item, index) => {
             const li = document.createElement('li');
             li.className = 'playlist-item';
-            li.textContent = file.name.replace(/\.[^/.]+$/, "");
+            li.textContent = (item.nombre || '').replace(/\.[^/.]+$/, "");
             li.classList.toggle('playing', index === currentTrackIndex);
             li.addEventListener('click', () => playTrack(index));
             playlistEl.appendChild(li);
@@ -1308,19 +1326,46 @@ function loadFondosGlobalBlobs() {
     }
 
     playBtn?.addEventListener('click', togglePlayPause);
-    nextBtn?.addEventListener('click', () => playTrack((currentTrackIndex + 1) % localPlaylistFiles.length));
-    prevBtn?.addEventListener('click', () => playTrack((currentTrackIndex - 1 + localPlaylistFiles.length) % localPlaylistFiles.length));
+    nextBtn?.addEventListener('click', () => {
+        if (serverMusicList.length === 0) return;
+        playTrack((currentTrackIndex + 1) % serverMusicList.length);
+    });
+    prevBtn?.addEventListener('click', () => {
+        if (serverMusicList.length === 0) return;
+        playTrack((currentTrackIndex - 1 + serverMusicList.length) % serverMusicList.length);
+    });
     volumeSlider?.addEventListener('input', (e) => localPlayer.volume = e.target.value);
     localPlayer.addEventListener('ended', () => nextBtn.click());
+    localPlayer.addEventListener('error', () => {
+        try {
+            const code = localPlayer.error && localPlayer.error.code;
+            console.error('Error reproduciendo música de usuario. code=', code);
+            // Mensaje breve en UI si existe utilidades
+            if (typeof showToast === 'function') {
+                showToast('No se pudo reproducir esta pista.');
+            }
+        } catch (_) {}
+    });
 
     uploadBtn?.addEventListener('click', () => fileInput.click());
-    fileInput?.addEventListener('change', (e) => {
-        localPlaylistFiles.push(...e.target.files);
-        updatePlaylistUI();
-        if (localPlayer.paused && localPlayer.src === '') {
-            playTrack(currentTrackIndex === -1 ? 0 : currentTrackIndex);
+    fileInput?.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files || []);
+        for (const f of files) {
+            const fd = new FormData();
+            fd.append('music', f);
+            try {
+                await fetch('subirMusicaUsuario.php', { method: 'POST', body: fd });
+            } catch (_) { /* ignore single file errors */ }
         }
+        await loadServerMusic();
+        if (!localPlayer.src && serverMusicList.length > 0) {
+            playTrack(0);
+        }
+        e.target.value = '';
     });
+
+    // Cargar la lista al iniciar
+    document.addEventListener('DOMContentLoaded', loadServerMusic);
 
     // ---------- Tasks ----------
     const taskList = $('#task-list');
