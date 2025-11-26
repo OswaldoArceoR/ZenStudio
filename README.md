@@ -12,13 +12,14 @@ ZenStudio es una aplicación web diseñada para mejorar tu flujo de trabajo medi
 
 ## Screenshots
 
-![App Screenshot](https://via.placeholder.com/468x300?text=App+Screenshot+Here)
+![App Screenshot](assets/IMAGENES/inicio.png)
 
-![App Screenshot](https://via.placeholder.com/468x300?text=App+Screenshot+Here)
+![App Screenshot](assets/IMAGENES/pagina1.png)
 
+##  Características Principales
 
-## Features
-
+* ** Sistema de Usuarios:** Registro y autenticación segura (`registro.html`, `inicioSesion.php`).
+* **Persistencia en Base de Datos:** Toda tu configuración, tareas y notas se guardan en una base de datos SQL, permitiendo acceder a tu cuenta desde cualquier dispositivo.
 - **Temporizador Pomodoro**: Totalmente personalizable y con notificaciones visuales para gestionar tus ciclos de trabajo y descanso.
 - **Mezclador de Sonidos Ambientales:**
  - Incluye sonidos predefinidos de alta calidad (Lluvia, Océano,Río, etc.).
@@ -35,42 +36,58 @@ ZenStudio es una aplicación web diseñada para mejorar tu flujo de trabajo medi
 - **Persistencia de Datos**: Todo tu progreso (tareas, notas, configuración, fondos personalizados) se guarda automáticamente en la memoria del navegador.
 
 
-## Tech Stack
+---
 
-**HTML:** Estructura semántica y accesibilidad.
+##  Tecnologías Utilizadas
 
-**CSS3:** Variables CSS para manejo de temas, Flexbox/Grid para el diseño y animaciones suaves.
+### Frontend (Cliente)
+* **HTML5:** Estructura semántica de las vistas (`index.html`, `registro.html`).
+* **CSS3:** Hojas de estilo modulares (`principal.css`, `perfil.css`, `inicioSesion.css`) y variables para temas.
+* **JavaScript (Vanilla ES6+):** Lógica del cliente modularizada (`principal.js`, `fondos.js`, `perfil.js`).
+* **React.js (JSX):** Componentes dinámicos para la Landing Page (`inicio.index.jsx`).
 
-**JavaScript (Vanilla ES6+):** Lógica modular, manipulación del DOM y gestión de estado local sin frameworks pesados.
+### Backend (Servidor)
+* **PHP:** Lógica del servidor, manejo de sesiones, subida de archivos y API REST interna (`paginaprincipal.php`, `guardarConfiguracion.php`, `subirMusicaUsuario.php`).
 
-**React.js (v18):** Utilizado específicamente en la página de inicio para crear componentes modulares (Hero, Secciones) y controlar estados de animación mediante Hooks .
+### Base de Datos
+* **SQL:** Base de datos relacional para usuarios, configuración y contenido multimedia (`zenstudio.sql`).
 
+---
 
-## File structure
+##  Estructura del Proyecto
 
-El proyecto se organiza en dos directorios principales:
-
-1. **IMAGENES/:** Carpeta externa que contiene los recursos gráficos globales (fondos GIF, etc.).
-
-2. **Prueba2_PaginaPrincipal/**: Carpeta principal que contiene el código fuente y recursos locales:
-o **Páginas (HTML):**
- - inicio.html: Página de Aterrizaje (Landing Page).
- - paginaprincipal.html: Dashboard principal (App).
- - acceso.html: Pantalla de Login/Registro.
- - profile.html: Configuración de perfil de usuario.
-o **Estilos (CSS):**
- - styles.css: Variables globales y estilos del dashboard.
- - inicio.css, acceso.css, profile.css: Estilos específicos de cada sección.
-o **Lógica (JS & JSX):**
- - app.js: Cerebro principal de la aplicación (Lógica del Dashboard).
- - inicio.jsx: Componentes React para la bienvenida.
- - components.jsx: Componentes React compartidos.
- - inicio.js, acceso.js, profile.js: Scripts de soporte.
-o **Recursos Multimedia (Locales):**
- - Imágenes: logo.jpeg, zenstudio.png, anime.gif, hogera.gif.
- - Audio: gato.mp3, rio.mp3, Sonidodelluvia.mp3, Sonidodeoceano.mp3.
- 
-
+```text
+ZenStudio/
+├── CSS/                       # Hojas de estilo modulares
+│   ├── general.css            # Estilos base
+│   ├── inicioSesion.css
+│   ├── perfil.css
+│   ├── principal.css          # Estilos del Dashboard
+│   ├── registro.css
+│   └── styleprueba.css
+├── JS/                        # Lógica del Frontend
+│   ├── fondos.js              # Gestión de fondos animados
+│   ├── perfil.js              # Gestión de usuario
+│   ├── principal.js           # Core del Dashboard
+│   ├── principalP1.js a P5.js # Módulos divididos del dashboard
+│   └── script.js
+├── PHP/                       # Lógica del Backend (API & Controladores)
+│   ├── inicioSesion.php
+│   ├── registroUsuario.php
+│   ├── paginaprincipal.php    # Vista protegida del Dashboard
+│   ├── guardarConfiguracion.php
+│   ├── subirFondoUsuario.php
+│   └── ... (otros controladores)
+├── db/                        # Base de Datos
+│   └── zenstudio.sql          # Script de creación de tablas
+├── JSX/                       # Componentes React
+│   └── inicio.index.jsx
+├── IMAGENES/                  # Recursos gráficos (Avatares, GIFs)
+├── SONIDOS/                   # Recursos de audio base
+├── index.html                 # Landing Page (Bienvenida)
+├── registro.html              # Formulario de Registro
+└── README.md                  # Documentación
+```
 ## CREDITS AND AUTHORS
 
 - Jesus Daniel Bacelis Santos - Desarrollador Frontend
