@@ -26,8 +26,8 @@ try {
     $stmt = $conexion->prepare('SELECT id_fondo_usuario FROM fondos_usuario WHERE id_fondo_usuario = ? AND usuario_id = ? LIMIT 1');
     $stmt->bind_param('ii', $id, $userId);
     $stmt->execute();
-    $res = $stmt->get_result();
-    if ($res->num_rows === 0) {
+    $stmt->store_result();
+    if ($stmt->num_rows === 0) {
         echo json_encode([ 'success' => false, 'message' => 'Fondo no encontrado o no pertenece al usuario' ]);
         exit();
     }
@@ -45,6 +45,6 @@ try {
     echo json_encode([ 'success' => true ]);
 } catch (Throwable $e) {
     error_log('[eliminarFondoUsuario] '.$e->getMessage());
-    echo json_encode([ 'success' => false, 'message' => 'Excepción en servidor' ]);
+    echo json_encode([ 'success' => false, 'message' => 'Excepción en servidor', 'error' => $e->getMessage() ]);
 }
 ?>

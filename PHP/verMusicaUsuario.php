@@ -7,7 +7,8 @@ if ($id <= 0) { http_response_code(400); exit('ID inválido'); }
 if (!isset($_SESSION['user_id'])) { http_response_code(401); exit('No autenticado'); }
 $usuario_id = (int)$_SESSION['user_id'];
 
-$stmt = $conexion->prepare('SELECT archivo_musica, nombre, mime_type FROM musica_usuario WHERE id_musica_usuario = ? AND usuario_id = ? LIMIT 1');
+// Usar sólo tabla singular musica_usuario
+$stmt = $conexion->prepare("SELECT archivo_musica, nombre, mime_type FROM musica_usuario WHERE id_musica_usuario = ? AND usuario_id = ? LIMIT 1");
 if (!$stmt) { http_response_code(500); exit('Error preparar consulta'); }
 $stmt->bind_param('ii', $id, $usuario_id);
 $stmt->execute();
@@ -20,13 +21,22 @@ $data = $row['archivo_musica'];
 $size = strlen($data);
 $nombre = $row['nombre'];
 $mime = $row['mime_type'] ?: 'application/octet-stream';
+// Compatibilidad PHP<8 para ends_with
+if (!function_exists('zen_ends_with')) {
+    function zen_ends_with($haystack, $needle) {
+        if ($needle === '') return true;
+        $hlen = strlen($haystack); $nlen = strlen($needle);
+        if ($nlen > $hlen) return false;
+        return substr($haystack, -$nlen) === $needle;
+    }
+}
 if ($mime === 'application/octet-stream') {
     $lower = strtolower($nombre);
-    if (str_ends_with($lower, '.mp3')) $mime = 'audio/mpeg';
-    elseif (str_ends_with($lower, '.wav')) $mime = 'audio/wav';
-    elseif (str_ends_with($lower, '.ogg')) $mime = '    audio/ogg';
-    elseif (str_ends_with($lower, '.m4a') || str_ends_with($lower, '.aac')) $mime = 'audio/aac';
-    elseif (str_ends_with($lower, '.webm')) $mime = 'audio/webm';
+    if (zen_ends_with($lower, '.mp3')) $mime = 'audio/mpeg';
+    elseif (zen_ends_with($lower, '.wav')) $mime = 'audio/wav';
+    elseif (zen_ends_with($lower, '.ogg')) $mime = 'audio/ogg';
+    elseif (zen_ends_with($lower, '.m4a') || zen_ends_with($lower, '.aac')) $mime = 'audio/aac';
+    elseif (zen_ends_with($lower, '.webm')) $mime = 'audio/webm';
 }
 
 header('Content-Type: ' . $mime);

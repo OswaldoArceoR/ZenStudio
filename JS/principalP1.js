@@ -223,6 +223,8 @@ function setCookie(name, value, days) {
     // Cargar fondos al iniciar
     document.addEventListener('DOMContentLoaded', function() {
         loadFondosGlobalBlobs();
+        // Inicializar lógica de eliminación múltiple de fondos de usuario
+        initUserBackgroundBulkDelete();
     });
 
 
@@ -523,6 +525,92 @@ function loadGlobalSoundsBlobs() {
                 window.location.href = 'cerrarSesion.php';
             }
         });
+    }
+
+    // ---------- Fondos de Usuario: eliminación múltiple conectada a BD ----------
+    function initUserBackgroundBulkDelete() {
+        const userGallery = document.getElementById('user-background-gallery');
+        const bulkToggle = document.getElementById('bulk-delete-toggle-btn');
+        if (!userGallery || !bulkToggle) return;
+
+        let bulkMode = false;
+
+        function setBulkMode(enabled) {
+            bulkMode = !!enabled;
+            userGallery.classList.toggle('bulk-delete-mode', bulkMode);
+            bulkToggle.classList.toggle('success-btn', bulkMode);
+            bulkToggle.classList.toggle('danger-btn', !bulkMode);
+            bulkToggle.textContent = bulkMode ? 'Confirmar Eliminación' : 'Eliminar Fondos';
+            if (!bulkMode) {
+                Array.from(userGallery.querySelectorAll('.bg-item.selected')).forEach(el => el.classList.remove('selected'));
+            }
+        }
+
+        bulkToggle.addEventListener('click', () => {
+            if (!bulkMode) {
+                setBulkMode(true);
+                return;
+            }
+            const selected = Array.from(userGallery.querySelectorAll('.bg-item.selected'));
+            if (!selected.length) { setBulkMode(false); return; }
+            const ids = selected.map(el => el.getAttribute('data-id')).filter(Boolean);
+            deleteUserBackgrounds(ids).then(deletedIds => {
+                const evt = new CustomEvent('userBackgroundsDeleted', { detail: { ids: deletedIds } });
+                userGallery.dispatchEvent(evt);
+                setBulkMode(false);
+            });
+        });
+
+        userGallery.addEventListener('click', (e) => {
+            const card = e.target.closest('.bg-item');
+            if (!card || !bulkMode) return;
+            // En modo bulk, solo seleccionar; evitar que otros listeners apliquen el fondo
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation?.();
+            card.classList.toggle('selected');
+        });
+
+        userGallery.addEventListener('userBackgroundsDeleted', (e) => {
+            const ids = (e.detail && e.detail.ids) || [];
+            ids.forEach(id => {
+                const el = userGallery.querySelector(`.bg-item[data-id="${id}"]`);
+                if (el) {
+                    el.classList.add('deleted');
+                    setTimeout(() => el.remove(), 250);
+                }
+            });
+        });
+    }
+
+    async function deleteUserBackgrounds(ids) {
+        const deleted = [];
+        for (const id of ids) {
+            try {
+                const form = new FormData();
+                form.append('id', id);
+                const resp = await fetch('eliminarFondoUsuario.php', { method: 'POST', body: form });
+                const data = await resp.json().catch(() => ({ success: false }));
+                if (resp.ok && data && data.success) {
+                    deleted.push(id);
+                    // Si el fondo activo era éste, limpiar configuración
+                    const active = JSON.parse(localStorage.getItem('zen_active_background') || 'null');
+                    const el = document.querySelector(`#user-background-gallery .bg-item[data-id="${id}"]`);
+                    const isActiveUserBg = el && el.classList.contains('active-user-bg');
+                    if (isActiveUserBg) {
+                        localStorage.removeItem('zen_active_background');
+                        saveConfig({ fondo_usuario_id: null });
+                        const bgContainer = document.querySelector('#background-container');
+                        if (bgContainer) { bgContainer.style.backgroundImage = 'none'; bgContainer.innerHTML = ''; }
+                    }
+                } else {
+                    console.warn('No se pudo eliminar fondo usuario id=', id, data);
+                }
+            } catch (e) {
+                console.error('Error eliminando fondo usuario id=', id, e);
+            }
+        }
+        return deleted;
     }
 
     // --- Credits Modal Logic ---

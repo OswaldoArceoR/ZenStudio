@@ -3,16 +3,17 @@
     const mediaTabs = $$('.media-tab-btn', mediaPanel);
     const mediaTabContents = $$('.media-tab-content', mediaPanel);
 
-    mediaTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabName = tab.dataset.tab;
+    const mediaTabsBar = mediaPanel?.querySelector('.media-tabs');
+    mediaTabsBar?.addEventListener('click', (ev) => {
+        const tab = ev.target.closest('.media-tab-btn');
+        if (!tab || !mediaTabs.includes(tab)) return;
+        const tabName = tab.dataset.tab;
 
-            mediaTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
+        mediaTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
 
-            mediaTabContents.forEach(content => {
-                content.classList.toggle('active', content.id === `media-${tabName}-content`);
-            });
+        mediaTabContents.forEach(content => {
+            content.classList.toggle('active', content.id === `media-${tabName}-content`);
         });
     });
 
@@ -62,6 +63,12 @@
     const localPlayer = new Audio();
     let localPlaylistFiles = [];
     let currentTrackIndex = -1;
+    let serverTrackIdsInPlaylist = new Set();
+    // Modo eliminación múltiple (renombrado para evitar colisión global)
+    let musicDeleteMode = false;
+    let selectedServerMusicIds = new Set();
+    let deleteBtnRef = null;
+    let deletePreview = null;
 
     const playBtn = $('#local-player-play');
     const prevBtn = $('#local-player-prev');
@@ -108,11 +115,92 @@
         localPlaylistFiles.forEach((file, index) => {
             const li = document.createElement('li');
             li.className = 'playlist-item';
-            li.textContent = file.name.replace(/\.[^/.]+$/, "");
+            const baseName = file.name.replace(/\.[^/.]+$/, "");
+            // Contenido: checkbox (sólo en deleteMode) + texto
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+
+            if (musicDeleteMode && file._serverId) {
+                const cb = document.createElement('span');
+                cb.className = 'srv-del-checkbox';
+                cb.style.display = 'inline-flex';
+                cb.style.width = '16px';
+                cb.style.height = '16px';
+                cb.style.border = '2px solid var(--clr-text-muted, #9aa3af)';
+                cb.style.borderRadius = '4px';
+                cb.style.alignItems = 'center';
+                cb.style.justifyContent = 'center';
+                cb.style.marginRight = '8px';
+                cb.style.fontSize = '12px';
+                cb.style.lineHeight = '1';
+                cb.style.userSelect = 'none';
+                const selected = selectedServerMusicIds.has(file._serverId);
+                if (selected) {
+                    cb.textContent = '✓';
+                    cb.style.background = 'var(--clr-primary, #22c55e)';
+                    cb.style.color = '#fff';
+                    cb.style.borderColor = 'var(--clr-primary, #22c55e)';
+                } else {
+                    cb.textContent = '';
+                    cb.style.background = 'transparent';
+                    cb.style.color = 'transparent';
+                }
+                row.appendChild(cb);
+                li.style.cursor = 'pointer';
+            } else {
+                li.style.cursor = '';
+            }
+
+            const label = document.createElement('span');
+            label.textContent = baseName + (file._serverId ? '' : ' (local)');
+            row.appendChild(label);
+            li.appendChild(row);
             li.classList.toggle('playing', index === currentTrackIndex);
-            li.addEventListener('click', () => playTrack(index));
+            // Click: en modo eliminación, seleccionar; de lo contrario, reproducir
+            li.addEventListener('click', (ev) => {
+                if (musicDeleteMode && file._serverId) {
+                    ev.preventDefault();
+                    const sid = file._serverId;
+                    if (selectedServerMusicIds.has(sid)) {
+                        selectedServerMusicIds.delete(sid);
+                        // re-render para actualizar checkbox
+                        updatePlaylistUI();
+                    } else {
+                        selectedServerMusicIds.add(sid);
+                        updatePlaylistUI();
+                    }
+                    updateDeletePreview();
+                    return;
+                }
+                playTrack(index);
+            });
+            if (file._serverId) li.dataset.serverId = String(file._serverId);
             playlistEl.appendChild(li);
         });
+    }
+
+    function updateDeletePreview() {
+        if (!deletePreview) return;
+        const count = selectedServerMusicIds.size;
+        deletePreview.textContent = count > 0 ? `Seleccionados: ${count}` : '';
+    }
+
+    function updateDeleteControlsVisibility() {
+        if (!deleteBtnRef) return;
+        const hasServerMusic = serverTrackIdsInPlaylist.size > 0;
+        deleteBtnRef.style.display = hasServerMusic ? '' : 'none';
+        if (!hasServerMusic && musicDeleteMode) {
+            // Salir de selección si ya no hay músicas
+            musicDeleteMode = false;
+            selectedServerMusicIds.clear();
+            deleteBtnRef.setAttribute('aria-pressed', 'false');
+            deleteBtnRef.classList.add('danger-btn');
+            deleteBtnRef.classList.remove('primary-btn');
+            deleteBtnRef.textContent = 'Eliminar música (selección)';
+            updateDeletePreview();
+            updatePlaylistUI();
+        }
     }
 
     playBtn?.addEventListener('click', togglePlayPause);
@@ -122,10 +210,145 @@
     localPlayer.addEventListener('ended', () => nextBtn.click());
 
     uploadBtn?.addEventListener('click', () => fileInput.click());
-    fileInput?.addEventListener('change', (e) => {
-        localPlaylistFiles.push(...e.target.files);
-        updatePlaylistUI();
-        if (localPlayer.paused && localPlayer.src === '') {
-            playTrack(currentTrackIndex === -1 ? 0 : currentTrackIndex);
+    fileInput?.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        for (const f of files) {
+            if (!f.type?.startsWith('audio/')) {
+                if (typeof showToast === 'function') showToast('Archivo no es audio');
+                continue;
+            }
+            try {
+                const fd = new FormData();
+                fd.append('music', f);
+                const resp = await fetch('subirMusicaUsuario.php', { method: 'POST', body: fd });
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok || !data || !data.success) {
+                    if (typeof showToast === 'function') showToast('Error al subir música');
+                } else {
+                    if (typeof showToast === 'function') showToast('Música subida');
+                }
+            } catch(err) {
+                if (typeof showToast === 'function') showToast('Fallo de red al subir');
+            }
         }
+        await loadServerMusicToPlaylist();
+        e.target.value = '';
     });
+
+    // --- Integración Música Servidor (musica_usuario) ---
+    async function loadServerMusicToPlaylist() {
+        try {
+            // Rutas consistentes: siempre acceder a PHP/musica via archivo en misma carpeta PHP
+            const resp = await fetch('obtenerMusicaUsuario.php');
+            const data = await resp.json().catch(() => null);
+            if (!data || !data.success || !Array.isArray(data.musica)) return;
+            for (const m of data.musica) {
+                if (serverTrackIdsInPlaylist.has(m.id)) continue;
+                try {
+                    const br = await fetch(m.url); // m.url apunta a verMusicaUsuario.php?id=...
+                    if (!br.ok) continue;
+                    const blob = await br.blob();
+                    const file = new File([blob], m.nombre, { type: m.mime || 'audio/mpeg' });
+                    file._serverId = m.id;
+                    file._serverUrl = m.url;
+                    localPlaylistFiles.push(file);
+                    serverTrackIdsInPlaylist.add(m.id);
+                } catch(e) { /* silencioso */ }
+            }
+            updatePlaylistUI();
+            updateDeleteControlsVisibility();
+        } catch(e) { /* silencioso */ }
+    }
+
+    // Cargar inicialmente al abrir panel (si existe)
+    if (mediaPanel) {
+        loadServerMusicToPlaylist();
+    }
+
+    // Actualizar playlist si se sube nuevo sonido (evento disparado en principalP2.js)
+    document.addEventListener('userSoundUploaded', () => {
+        loadServerMusicToPlaylist();
+    });
+
+    // Contenedor de la playlist (para otros botones auxiliares)
+    const playlistContainer = playlistEl?.parentElement;
+
+    // Botón eliminar música del servidor (modo selección múltiple)
+    if (playlistContainer && !document.getElementById('toggle-delete-server-music-btn')) {
+        deleteBtnRef = document.createElement('button');
+        deleteBtnRef.id = 'toggle-delete-server-music-btn';
+        deleteBtnRef.className = 'action-btn danger-btn';
+        deleteBtnRef.textContent = 'Eliminar música (selección)';
+        deleteBtnRef.style.marginTop = '8px';
+        playlistContainer.appendChild(deleteBtnRef);
+
+        deletePreview = document.createElement('div');
+        deletePreview.id = 'server-music-delete-preview';
+        deletePreview.style.marginTop = '6px';
+        deletePreview.style.fontSize = '.9rem';
+        deletePreview.style.color = 'var(--clr-text-muted)';
+        playlistContainer.appendChild(deletePreview);
+
+        deleteBtnRef.addEventListener('click', async () => {
+            if (!musicDeleteMode) {
+                // Entrar en modo selección
+                musicDeleteMode = true;
+                selectedServerMusicIds.clear();
+                deleteBtnRef.setAttribute('aria-pressed', 'true');
+                deleteBtnRef.classList.remove('danger-btn');
+                deleteBtnRef.classList.add('primary-btn');
+                deleteBtnRef.textContent = 'Confirmar eliminación';
+                updateDeletePreview();
+                updatePlaylistUI();
+                return;
+            }
+            // Confirmar eliminación
+            if (selectedServerMusicIds.size === 0) {
+                // Si no hay selección, salir del modo selección
+                musicDeleteMode = false;
+                selectedServerMusicIds.clear();
+                deleteBtnRef.setAttribute('aria-pressed', 'false');
+                deleteBtnRef.classList.add('danger-btn');
+                deleteBtnRef.classList.remove('primary-btn');
+                deleteBtnRef.textContent = 'Eliminar música (selección)';
+                updateDeletePreview();
+                updatePlaylistUI();
+                return;
+            }
+            try {
+                const ids = Array.from(selectedServerMusicIds);
+                const r = await fetch('eliminarMusicaUsuario.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids })
+                });
+                const data = await r.json().catch(() => ({ success:false }));
+                if (!data.success) {
+                    if (typeof showToast === 'function') showToast('No se pudo eliminar en servidor');
+                    return;
+                }
+                // Filtrar playlist y set de ids de servidor
+                const delSet = new Set(ids);
+                localPlaylistFiles = localPlaylistFiles.filter(f => !(f._serverId && delSet.has(f._serverId)));
+                ids.forEach(id => serverTrackIdsInPlaylist.delete(id));
+                currentTrackIndex = Math.min(currentTrackIndex, localPlaylistFiles.length - 1);
+                if (typeof showToast === 'function') showToast('Música eliminada');
+            } catch(err) {
+                if (typeof showToast === 'function') showToast('Error eliminando');
+            } finally {
+                // Salir de modo selección
+                musicDeleteMode = false;
+                selectedServerMusicIds.clear();
+                deleteBtnRef.setAttribute('aria-pressed', 'false');
+                deleteBtnRef.classList.add('danger-btn');
+                deleteBtnRef.classList.remove('primary-btn');
+                deleteBtnRef.textContent = 'Eliminar música (selección)';
+                updateDeletePreview();
+                updatePlaylistUI();
+                updateDeleteControlsVisibility();
+            }
+        });
+        // Ocultar si aún no hay música del servidor
+        updateDeleteControlsVisibility();
+    }

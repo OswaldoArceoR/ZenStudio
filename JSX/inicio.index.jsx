@@ -28,8 +28,8 @@ const LandingActions = () => {
             <div className="landing-actions__container">
                 <h2 className="landing-actions__title">¿Listo para empezar?</h2>
                 {/* Unificamos acceso en una sola página PHP con React */}
-                <a href="PHP/acceso.php" className="landing-actions__button">Iniciar Sesión</a>
-                <a href="PHP/acceso.php?form=register" className="landing-actions__button landing-actions__button--secondary">Registrarse</a>
+                <a href="PHP/inicioSesion.php" className="landing-actions__button">Iniciar Sesión</a>
+                <a href="registro.html" className="landing-actions__button landing-actions__button--secondary">Registrarse</a>
             </div>
         </section>
     );

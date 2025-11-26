@@ -364,6 +364,7 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
   <link rel="stylesheet" href="../CSS/principalP1.css">
   <link rel="stylesheet" href="../CSS/principalP2.css">
   <link rel="stylesheet" href="../CSS/fondos.css">
+  <link rel="icon" href="../IMAGENES/ZenStudioLogo.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body data-theme="light">

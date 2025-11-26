@@ -1,5 +1,6 @@
-    let userSounds = JSON.parse(localStorage.getItem(LS.USER_SOUNDS) || '[]');
-    let soundsData = []; // Se llenará dinámicamente con globales + usuario
+    // Uso exclusivo de BLOB en BD: se elimina almacenamiento local/base64
+    let userSounds = [];
+    let soundsData = []; // Se llenará dinámicamente con globales + usuario (servidor)
 
 
     const soundListContainer = $('#sound-list-container');
@@ -9,6 +10,190 @@
     const toggleUserSoundsBtn = document.getElementById('toggle-user-sounds-btn');
     const refreshUserSoundsBtn = document.getElementById('refresh-user-sounds-btn');
     const userSoundList = document.getElementById('user-sound-list');
+    // Dinámica: botón de eliminar sonidos subidos (aparece tras subir)
+    let deleteUploadedSoundsBtn = null;
+    let onUserSoundsDeleteClickBound = null;
+    let onUserSoundsDeleteDelegated = null; // deprecated: no longer used
+    let deleteHandlerBusy = false;
+    let uploadedPreviewContainer = null;
+    let recentlyUploadedSoundIds = [];
+    let selectedForDeletionIds = new Set();
+    let deleteMode = false;
+
+    function updateUploadedPreview() {
+        if (!uploadedPreviewContainer) return;
+        if (selectedForDeletionIds.size === 0) {
+            uploadedPreviewContainer.textContent = '';
+            return;
+        }
+        uploadedPreviewContainer.textContent = 'Seleccionados: ' + Array.from(selectedForDeletionIds).join(', ');
+    }
+
+    function ensureDeleteUploadedButton() {
+        // Reutiliza botón fijo si existe, o créalo al vuelo bajo la lista
+        if (!deleteUploadedSoundsBtn) {
+            deleteUploadedSoundsBtn = document.getElementById('delete-user-sound-btn');
+        }
+        if (!deleteUploadedSoundsBtn) {
+            try {
+                deleteUploadedSoundsBtn = document.createElement('button');
+                deleteUploadedSoundsBtn.id = 'delete-user-sound-btn';
+                deleteUploadedSoundsBtn.className = 'action-btn danger-btn';
+                deleteUploadedSoundsBtn.textContent = 'Eliminar Sonido Usuario';
+                if (userSoundList) {
+                    userSoundList.insertAdjacentElement('afterend', deleteUploadedSoundsBtn);
+                } else if (userSoundsSection) {
+                    userSoundsSection.appendChild(deleteUploadedSoundsBtn);
+                } else if (uploadSoundBtn) {
+                    uploadSoundBtn.insertAdjacentElement('afterend', deleteUploadedSoundsBtn);
+                } else {
+                    document.body.appendChild(deleteUploadedSoundsBtn);
+                }
+            } catch(_) {}
+        }
+        if (!deleteUploadedSoundsBtn) return;
+
+        // Crear contenedor de vista previa si no existe (debajo del botón)
+        if (!uploadedPreviewContainer) {
+            uploadedPreviewContainer = document.getElementById('uploaded-delete-preview');
+        }
+        if (!uploadedPreviewContainer) {
+            uploadedPreviewContainer = document.createElement('div');
+            uploadedPreviewContainer.id = 'uploaded-delete-preview';
+            uploadedPreviewContainer.style.marginTop = '8px';
+            uploadedPreviewContainer.style.fontSize = '.9rem';
+            uploadedPreviewContainer.style.color = 'var(--clr-text-muted)';
+            deleteUploadedSoundsBtn.insertAdjacentElement('afterend', uploadedPreviewContainer);
+        }
+
+        deleteUploadedSoundsBtn.setAttribute('aria-pressed', 'false');
+        deleteUploadedSoundsBtn.title = 'Selecciona y confirma eliminación';
+        deleteUploadedSoundsBtn.classList.add('danger-btn');
+        deleteUploadedSoundsBtn.classList.remove('primary-btn');
+        deleteUploadedSoundsBtn.type = 'button';
+        deleteUploadedSoundsBtn.disabled = false;
+        deleteUploadedSoundsBtn.textContent = 'Eliminar Sonido Usuario';
+        // Colocar un salto visual por debajo de la lista
+        try { deleteUploadedSoundsBtn.style.marginTop = '12px'; } catch(_) {}
+
+        // Core handler (can be used by button or delegated)
+        const coreDeleteHandler = async (ev) => {
+            if (deleteHandlerBusy) return;
+            deleteHandlerBusy = true;
+            try {
+                ev?.preventDefault?.();
+                try { console.log('[Sonidos] Click en botón eliminar (estado inicial)', { pressed: deleteUploadedSoundsBtn.getAttribute('aria-pressed'), deleteMode, selected: Array.from(selectedForDeletionIds) }); } catch(_){ }
+                // Usar únicamente deleteMode como fuente de verdad
+                const inDeleteMode = !!deleteMode;
+                if (!inDeleteMode) {
+                    // Entrar en modo eliminación
+                    deleteMode = true;
+                    deleteUploadedSoundsBtn.setAttribute('aria-pressed', 'true');
+                    deleteUploadedSoundsBtn.classList.remove('danger-btn');
+                    deleteUploadedSoundsBtn.classList.add('primary-btn');
+                    deleteUploadedSoundsBtn.textContent = 'Confirmar eliminación';
+                    applyDeleteModeToUserSoundList();
+                    try { console.log('[Sonidos] Activado modo eliminación'); } catch(_){ }
+                } else {
+                    // Segundo click: si no hay selección, cancelar modo eliminación
+                    if (selectedForDeletionIds.size === 0) {
+                        deleteMode = false;
+                        deleteUploadedSoundsBtn.setAttribute('aria-pressed', 'false');
+                        deleteUploadedSoundsBtn.classList.add('danger-btn');
+                        deleteUploadedSoundsBtn.classList.remove('primary-btn');
+                        deleteUploadedSoundsBtn.textContent = 'Eliminar Sonido Usuario';
+                        applyDeleteModeToUserSoundList();
+                        if (typeof showToast === 'function') showToast('Selección cancelada');
+                        try { console.log('[Sonidos] Cancelado modo eliminación por no selección'); } catch(_){ }
+                        return;
+                    }
+                    // Hay elementos seleccionados: confirmar y eliminar
+                    const proceed = typeof confirm === 'function' ? confirm('¿Confirmar eliminación de los sonidos seleccionados?') : true;
+                    if (!proceed) {
+                        // Cancelar y salir de modo eliminación
+                        deleteMode = false;
+                        deleteUploadedSoundsBtn.setAttribute('aria-pressed', 'false');
+                        deleteUploadedSoundsBtn.classList.add('danger-btn');
+                        deleteUploadedSoundsBtn.classList.remove('primary-btn');
+                        deleteUploadedSoundsBtn.textContent = 'Eliminar Sonido Usuario';
+                        applyDeleteModeToUserSoundList();
+                        try { console.log('[Sonidos] Eliminación cancelada por usuario'); } catch(_){ }
+                        return;
+                    }
+                    const ids = Array.from(selectedForDeletionIds);
+                    try { console.log('[Sonidos] Eliminando ids', ids); } catch(_){ }
+                    try {
+                        let ok = 0;
+                        for (const id of ids) {
+                            try {
+                                const r = await fetch('eliminarSonidoUsuario.php', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                    body: new URLSearchParams({ id: String(id) })
+                                });
+                                const data = await r.json().catch(() => ({ success:false }));
+                                if (data.success) {
+                                    ok++;
+                                    selectedForDeletionIds.delete(id);
+                                    recentlyUploadedSoundIds = recentlyUploadedSoundIds.filter(x => x !== id);
+                                }
+                            } catch(_) { }
+                        }
+                        await loadServerUserSounds();
+                        updateUploadedPreview();
+                        if (typeof showToast === 'function') showToast(ok === ids.length ? 'Sonidos eliminados' : 'Eliminación parcial');
+                    } catch(e) {
+                        if (typeof showToast === 'function') showToast('Error al eliminar');
+                    } finally {
+                        // Salir de modo eliminación
+                        deleteMode = false;
+                        deleteUploadedSoundsBtn.setAttribute('aria-pressed', 'false');
+                        deleteUploadedSoundsBtn.classList.add('danger-btn');
+                        deleteUploadedSoundsBtn.classList.remove('primary-btn');
+                        deleteUploadedSoundsBtn.textContent = 'Eliminar Sonido Usuario';
+                        applyDeleteModeToUserSoundList();
+                    }
+                }
+            } finally {
+                deleteHandlerBusy = false;
+            }
+        };
+
+        // Bind directly to the button
+        if (onUserSoundsDeleteClickBound) {
+            deleteUploadedSoundsBtn.removeEventListener('click', onUserSoundsDeleteClickBound);
+        }
+        onUserSoundsDeleteClickBound = coreDeleteHandler;
+        deleteUploadedSoundsBtn.addEventListener('click', onUserSoundsDeleteClickBound);
+
+        // Remove any old delegated listener if present (avoid double triggers)
+        if (onUserSoundsDeleteDelegated) {
+            document.removeEventListener('click', onUserSoundsDeleteDelegated, true);
+            onUserSoundsDeleteDelegated = null;
+        }
+    }
+
+    // Eliminar y recrear desde cero el botón e indicadores
+    function recreateDeleteUserSoundButton() {
+        try {
+            document.querySelectorAll('#delete-user-sound-btn').forEach(n => n.remove());
+            if (userSoundsSection) {
+                userSoundsSection.querySelectorAll('button').forEach(b => {
+                    const txt = (b.textContent || '').trim().toLowerCase();
+                    if (txt.includes('eliminar sonido usuario')) b.remove();
+                });
+            }
+            const prev = document.getElementById('uploaded-delete-preview');
+            if (prev) prev.remove();
+        } catch(_) {}
+
+        deleteUploadedSoundsBtn = null;
+        uploadedPreviewContainer = null;
+        selectedForDeletionIds.clear();
+        deleteMode = false;
+        ensureDeleteUploadedButton();
+        applyDeleteModeToUserSoundList();
+    }
 
     // --- Cargar sonidos globales desde la base de datos al iniciar ---
     document.addEventListener('DOMContentLoaded', function() {
@@ -16,6 +201,20 @@
         // Silencio inmediato y refuerzo posterior (sin espera audible)
         forceMuteAllAudios();
         setTimeout(forceMuteAllAudios, 600);
+        // Eliminar/ocultar botón "Actualizar Lista" (por id y por texto como respaldo)
+        try {
+            if (refreshUserSoundsBtn) refreshUserSoundsBtn.remove();
+            else if (userSoundsSection) {
+                const btns = userSoundsSection.querySelectorAll('button');
+                btns.forEach(b => {
+                    if ((b.textContent || '').trim().toLowerCase().includes('actualizar lista')) {
+                        b.remove();
+                    }
+                });
+            }
+        } catch(_) {}
+        // Recrear botón fijo de eliminación multi-selección justo después de la lista
+        recreateDeleteUserSoundButton();
     });
 
     // --- Utilidad central para pausar y mutear todo ---
@@ -100,11 +299,19 @@
                 delete activeAudios[id];
             }
             const audio = new Audio(file);
-            audio.loop = false;
+            audio.loop = true;
             const soundItemUI = soundListContainer.querySelector(`[data-sound-id="${id}"]`);
             const slider = soundItemUI?.querySelector('.volume-slider');
             audio.volume = slider ? parseFloat(slider.value) : 0.5;
             audio.muted = true;
+            // Fallback por si loop es ignorado por el navegador
+            try {
+                audio.addEventListener('ended', () => {
+                    if (!audio.paused) return; // si ya fue pausado por UI, no relanzar
+                    audio.currentTime = 0;
+                    audio.play().catch(() => {});
+                });
+            } catch(_) {}
             activeAudios[id] = { player: audio, name, file };
         }
 
@@ -265,24 +472,48 @@
     function renderUserServerSounds(serverUserSounds) {
         if (!userSoundList) return;
         userSoundList.innerHTML = '';
-        selectedServerUserSoundId = null;
-        const deleteBtn = document.getElementById('delete-user-sound-btn');
-        if (deleteBtn) deleteBtn.disabled = true;
         serverUserSounds.forEach(s => {
             const el = createSoundItem(s);
-            // Selección para eliminación (solo sonidos servidor usuario prefijo srv_user_)
-            el.addEventListener('click', (e) => {
-                // Evitar que botones internos (play) cambien selección accidentalmente
-                if (e.target.closest('.sound-toggle-btn')) return;
-                // Limpiar selección previa
-                userSoundList.querySelectorAll('.selected-sound').forEach(n => n.classList.remove('selected-sound'));
-                el.classList.add('selected-sound');
-                // Guardar ID numérico (remover prefijo)
-                selectedServerUserSoundId = s.id.replace('srv_user_', '');
-                if (deleteBtn) deleteBtn.disabled = false;
-            });
             userSoundList.appendChild(el);
+
+            // Checkbox para selección múltiple y resaltar subidos recientemente
+            const idNum = parseInt(s.id.replace('srv_user_', ''), 10);
+            if (!Number.isNaN(idNum)) {
+                let sel = el.querySelector('.uploaded-select-checkbox');
+                if (!sel) {
+                    sel = document.createElement('input');
+                    sel.type = 'checkbox';
+                    sel.className = 'uploaded-select-checkbox';
+                    sel.style.marginRight = '8px';
+                    el.querySelector('.sound-info-group')?.insertAdjacentElement('afterbegin', sel);
+                    sel.addEventListener('change', (ev) => {
+                        if (ev.target.checked) {
+                            selectedForDeletionIds.add(idNum);
+                        } else {
+                            selectedForDeletionIds.delete(idNum);
+                        }
+                        updateUploadedPreview();
+                    });
+                }
+                // Mostrar sólo en modo eliminación
+                sel.style.display = deleteMode ? 'inline-block' : 'none';
+                if (recentlyUploadedSoundIds.includes(idNum)) {
+                    el.classList.add('recent-upload');
+                }
+            }
         });
+    }
+
+    function applyDeleteModeToUserSoundList() {
+        if (!userSoundList) return;
+        userSoundList.querySelectorAll('.uploaded-select-checkbox').forEach(cb => {
+            cb.style.display = deleteMode ? 'inline-block' : 'none';
+            if (!deleteMode) cb.checked = false;
+        });
+        if (!deleteMode) {
+            selectedForDeletionIds.clear();
+            updateUploadedPreview();
+        }
     }
 
     async function loadServerUserSounds() {
@@ -297,7 +528,7 @@
             }
             // Eliminar anteriores srv_user_ de soundsData
             soundsData = soundsData.filter(s => !s.id.startsWith('srv_user_'));
-            const serverUserSounds = data.sonidos.map(s => ({
+            const serverUserSounds = (data.sonidos || []).map(s => ({
                 id: 'srv_user_' + s.id,
                 name: s.nombre,
                 file: s.url,
@@ -305,6 +536,9 @@
             }));
             soundsData = [...soundsData, ...serverUserSounds];
             renderUserServerSounds(serverUserSounds);
+            // Asegurar botón recreado y checkboxes en estado correcto
+            recreateDeleteUserSoundButton();
+            applyDeleteModeToUserSoundList();
             if (typeof showToast === 'function') showToast('Sonidos usuario cargados');
         } catch (err) {
             console.error('Fallo al cargar sonidos usuario:', err);
@@ -320,35 +554,9 @@
         if (!visible) loadServerUserSounds();
     });
 
-    refreshUserSoundsBtn?.addEventListener('click', () => loadServerUserSounds());
+    // Botón "Actualizar Lista" eliminado del DOM
 
-    // --- Eliminación de sonido de servidor ---
-    let selectedServerUserSoundId = null; // ID numérico de la fila seleccionada
-    const deleteServerSoundBtn = document.getElementById('delete-user-sound-btn');
-
-    async function deleteSelectedServerUserSound() {
-        if (!selectedServerUserSoundId) return;
-        if (!confirm('¿Eliminar el sonido seleccionado del servidor?')) return;
-        try {
-            const resp = await fetch('eliminarSonidoUsuario.php?id=' + encodeURIComponent(selectedServerUserSoundId), { method: 'GET' });
-            const data = await resp.json().catch(() => ({ success:false, message:'Respuesta no válida' }));
-            if (!data.success) {
-                if (typeof showToast === 'function') showToast('No se pudo eliminar: ' + (data.message || 'Error')); else alert('Error al eliminar: ' + (data.message || ''));
-                return;
-            }
-            if (typeof showToast === 'function') showToast('Sonido eliminado');
-            // Recargar lista
-            loadServerUserSounds();
-        } catch (err) {
-            console.error('Error eliminando sonido usuario:', err);
-            if (typeof showToast === 'function') showToast('Error eliminando sonido');
-        } finally {
-            selectedServerUserSoundId = null;
-            if (deleteServerSoundBtn) deleteServerSoundBtn.disabled = true;
-        }
-    }
-
-    deleteServerSoundBtn?.addEventListener('click', deleteSelectedServerUserSound);
+    // (Eliminado) Botón "Eliminar sonido usuario" y su lógica de selección/confirmación
 
     // Asegura que la UI de sonidos muestre todo como detenido/silencioso
     function resetAmbientUI() {
@@ -376,9 +584,10 @@
             return;
         }
 
-        // Intento opcional de subida al servidor (no bloquea flujo local)
+        // Subida única al servidor (sin flujo local)
         try {
             const formData = new FormData();
+            // Backend de sonidos espera el campo 'sound' en subirSonidoUsuario.php
             formData.append('sound', file);
             const resp = await fetch('subirSonidoUsuario.php', { method: 'POST', body: formData });
             if (resp.ok) {
@@ -386,6 +595,18 @@
                 if (result && result.success) {
                     console.log('[UPLOAD] Sonido subido al servidor:', result);
                     if (typeof showToast === 'function') showToast('Sonido subido exitosamente.');
+                    if (typeof result.id === 'number') {
+                        recentlyUploadedSoundIds.push(result.id);
+                    }
+                    // Asegurar visibilidad y recargar sonidos del usuario
+                    if (userSoundsSection) {
+                        userSoundsSection.style.display = 'block';
+                        if (toggleUserSoundsBtn) toggleUserSoundsBtn.textContent = 'Ocultar Sonidos del Usuario';
+                    }
+                    await loadServerUserSounds();
+                    applyDeleteModeToUserSoundList();
+                    // Notificar a reproductor de media para agregar pista al playlist local
+                    try { document.dispatchEvent(new CustomEvent('userSoundUploaded', { detail: { id: result.id, name: result.name } })); } catch(e) {}
                 } else {
                     console.log('[UPLOAD] Respuesta servidor no exitosa:', result);
                     if (typeof showToast === 'function') showToast('No se pudo guardar en servidor');
@@ -395,85 +616,29 @@
                 if (typeof showToast === 'function') showToast('Error al subir al servidor');
             }
         } catch (err) {
-            console.warn('[UPLOAD] Error subiendo sonido al servidor (continuará modo local):', err);
-            if (typeof showToast === 'function') showToast('Fallo subida servidor; se guardará local');
+            console.warn('[UPLOAD] Error subiendo sonido al servidor:', err);
+            if (typeof showToast === 'function') showToast('Error al subir sonido al servidor');
         }
 
-        // Flujo local existente
-        pendingSoundFile = file;
-        openNameSoundModal();
+        // Sin flujo local: no se intenta guardar en localStorage ni variables temporales.
     });
 
-    function saveUserSound(soundName) {
-        if (pendingSoundFile) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const newSound = {
-                    id: `user_${Date.now()}`,
-                    name: soundName.trim(),
-                    file: event.target.result
-                };
-                userSounds.push(newSound);
-                localStorage.setItem(LS.USER_SOUNDS, JSON.stringify(userSounds));
-                renderSoundList();
-                closeNameSoundModal();
-                if (typeof showToast === 'function') showToast('Sonido subido exitosamente.');
-            };
-            reader.readAsDataURL(pendingSoundFile);
-            soundFileInput.value = '';
-        }
-    }
+    // Eliminado almacenamiento local/base64
+    function saveUserSound(soundName) { /* no-op */ }
 
-    function deleteUserSound(soundId) {
-        if (!confirm('¿Estás seguro de que quieres eliminar este sonido?')) return;
-
-        if (activeAudios[soundId] && !activeAudios[soundId].player.paused) {
-            toggleSound(soundId);
-        }
-        delete activeAudios[soundId];
-
-        userSounds = userSounds.filter(s => s.id !== soundId);
-        localStorage.setItem(LS.USER_SOUNDS, JSON.stringify(userSounds));
-        renderSoundList();
-    }
+    function deleteUserSound(soundId) { /* no-op: sólo servidor */ }
 
     // --- Lógica del Modal para nombrar sonidos ---
-    const nameSoundModal = $('#name-sound-modal');
-    const newSoundNameInput = $('#new-sound-name-input');
-    const saveSoundNameBtn = $('#save-sound-name-btn');
-    const closeNameSoundModalBtn = nameSoundModal?.querySelector('.close-modal-btn[data-target="name-sound-modal"]');
+    // Modal eliminado (ya no se nombra sonido local)
+    const nameSoundModal = null;
+    const newSoundNameInput = null;
+    const saveSoundNameBtn = null;
+    const closeNameSoundModalBtn = null;
 
-    function openNameSoundModal() {
-        newSoundNameInput.value = 'Mi Sonido Personalizado';
-        nameSoundModal?.classList.add('active');
-        nameSoundModal?.setAttribute('aria-hidden', 'false');
-        newSoundNameInput.focus();
-        newSoundNameInput.select();
-    }
+    function openNameSoundModal() { /* no-op */ }
+    function closeNameSoundModal() { /* no-op */ }
 
-    function closeNameSoundModal() {
-        nameSoundModal?.classList.remove('active');
-        nameSoundModal?.setAttribute('aria-hidden', 'true');
-        pendingSoundFile = null;
-        newSoundNameInput.value = '';
-    }
-
-    saveSoundNameBtn?.addEventListener('click', () => {
-        const soundName = newSoundNameInput.value.trim();
-        if (soundName) {
-            saveUserSound(soundName);
-        } else {
-            alert('Se requiere un nombre para el sonido.');
-        }
-    });
-
-    newSoundNameInput?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            saveSoundNameBtn.click();
-        }
-    });
-
-    closeNameSoundModalBtn?.addEventListener('click', closeNameSoundModal);
+    // Eliminados listeners del modal
 
     // small SVG helpers
     function playSVG() {

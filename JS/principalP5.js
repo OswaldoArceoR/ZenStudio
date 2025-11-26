@@ -403,7 +403,7 @@
     }
 
     //  Restaurar sonidos (deshabilitado: no restaurar sonidos activos automáticamente)
-    // function restoreActiveSounds() {} // NO restaurar sonidos automáticamente
+    function restoreActiveSounds() {} // NO restaurar sonidos automáticamente
     // --- [FIN] BLOQUE DE MEMORIA ---
 
     // --- Fondo de Usuario: Carga dinámica y subida al servidor ---
@@ -490,9 +490,11 @@
                     const isVideo = mime.startsWith('video');
 
                     const item = document.createElement('div');
-                    item.className = 'background-item';
+                    item.className = 'bg-item';
                     item.dataset.bgFile = url;
                     item.dataset.bgType = mime;
+                    item.setAttribute('data-id', String(fondo.id));
+                    item.dataset.userBgId = fondo.id;
 
                     if (isVideo) {
                         const video = document.createElement('video');
@@ -515,9 +517,17 @@
                     nameDiv.textContent = nombre.replace(/\.(mp4|gif|png|jpe?g)$/i,'');
                     item.appendChild(nameDiv);
 
-                    // Guardar id para eliminación futura
-                    item.dataset.userBgId = fondo.id;
-                    item.addEventListener('click', () => {
+                    // Click: aplicar fondo solo si NO estamos en modo eliminación múltiple
+                    item.addEventListener('click', (e) => {
+                        const galleryEl = document.getElementById('user-background-gallery');
+                        const inBulkMode = galleryEl && galleryEl.classList.contains('bulk-delete-mode');
+                        if (inBulkMode) {
+                            // En modo bulk: seleccionar/deseleccionar sin aplicar fondo
+                            e.preventDefault();
+                            e.stopPropagation();
+                            item.classList.toggle('selected');
+                            return;
+                        }
                         applyBackground(item.dataset.bgFile, item.dataset.bgType);
                         localStorage.setItem('zen_active_background', JSON.stringify({ file: item.dataset.bgFile, type: item.dataset.bgType, userBgId: fondo.id, scope: 'user' }));
                         currentUserBackgroundId = fondo.id;
@@ -541,6 +551,56 @@
         cargarFondosUsuarioListado();
         loadUserBackgrounds();
     });
+
+    // --- Eliminación múltiple (escuchar evento del panel y llamar al PHP) ---
+    const userBackgroundGalleryEl = document.getElementById('user-background-gallery');
+    if (userBackgroundGalleryEl) {
+        userBackgroundGalleryEl.addEventListener('deleteUserBackgrounds', async (e) => {
+            try {
+                const ids = (e.detail && e.detail.ids) || [];
+                if (!ids.length) return;
+                const results = await Promise.all(ids.map(async (id) => {
+                    try {
+                        const resp = await fetch('eliminarFondoUsuario.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+                            body: new URLSearchParams({ id: String(id) })
+                        });
+                        const data = await resp.json().catch(() => ({ success:false }));
+                        return { id, ok: !!data.success };
+                    } catch { return { id, ok: false }; }
+                }));
+
+                const deletedIds = results.filter(r => r.ok).map(r => r.id);
+                const failedCount = results.length - deletedIds.length;
+
+                if (deletedIds.length) {
+                    // Limpiar activo si coincide
+                    const saved = localStorage.getItem('zen_active_background');
+                    if (saved) {
+                        try {
+                            const parsed = JSON.parse(saved);
+                            if (parsed.scope === 'user' && deletedIds.includes(String(parsed.userBgId))) {
+                                localStorage.removeItem('zen_active_background');
+                                const bgC = document.getElementById('background-container');
+                                if (bgC) { bgC.style.backgroundImage='none'; bgC.innerHTML=''; }
+                            }
+                        } catch {}
+                    }
+                    // avisar a la UI para remover
+                    const evt = new CustomEvent('userBackgroundsDeleted', { detail: { ids: deletedIds } });
+                    userBackgroundGalleryEl.dispatchEvent(evt);
+                }
+                if (failedCount > 0) {
+                    showToast(`No se pudieron eliminar ${failedCount} elemento(s)`);
+                } else if (deletedIds.length) {
+                    showToast('Fondos eliminados');
+                }
+            } catch {
+                showToast('Error al eliminar fondos');
+            }
+        });
+    }
 
     // Eliminar fondo de usuario seleccionado
     if (deleteUserBackgroundBtn) {

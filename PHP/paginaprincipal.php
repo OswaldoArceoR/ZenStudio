@@ -40,11 +40,31 @@ if ($conexion) {
     <title>ZenStudio</title>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
-        <link rel="stylesheet" href="../CSS/principalP1.css">
-        <link rel="stylesheet" href="../CSS/principalP2.css">
-
+    <link rel="stylesheet" href="../CSS/principalP1.css">
+    <link rel="stylesheet" href="../CSS/principalP2.css">
+    <link rel="icon" href=".../IMAGENES/ZenStudioLogo.png" type="image/png">
 </head>
 <body>
+
+    <!-- Loader mínimo: overlay sólido con fade-out -->
+    <div id="page-loader" style="position:fixed; inset:0; background:#0b0f14; z-index:9999; transition:opacity 0.6s ease; display:flex; align-items:center; justify-content:center;">
+        <div class="loader-spinner" style="width:36px; height:36px; border:3px solid rgba(255,255,255,0.2); border-top-color:#8ab4f8; border-radius:50%; animation: spin 0.8s linear infinite;"></div>
+        <span style="position:absolute; left:-9999px;">Cargando…</span>
+    </div>
+    <style>
+        /* Spinner animation */
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        /* Fade-out al marcar como loaded */
+        #page-loader.loaded { opacity: 0; pointer-events: none; }
+        /* Tamaño más pequeño para miniaturas del usuario */
+        #user-background-gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        #user-background-gallery .bg-item { height: 120px; border-radius: 10px; overflow: hidden; position: relative; }
+        #user-background-gallery .bg-item img, 
+        #user-background-gallery .bg-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        #user-background-gallery.bulk-delete-mode .bg-item { outline: 2px dashed rgba(255,255,255,0.2); }
+        #user-background-gallery .bg-item.selected { outline: 2px solid #8af8a8; box-shadow: 0 0 0 2px rgba(138, 248, 168, 0.4) inset; }
+        #user-background-gallery .bg-item.deleted { opacity: 0; transform: scale(0.98); transition: opacity .25s ease, transform .25s ease; }
+    </style>
 
     <div class="zen-interface">
         <div id="background-container" class="background-container"></div>
@@ -288,8 +308,8 @@ if ($conexion) {
 
                 <!-- Pestañas del reproductor -->
                 <div class="media-tabs">
-                    <button class="media-tab-btn active" data-tab="youtube">YouTube</button>
-                    <button class="media-tab-btn" data-tab="local">Archivos Personales</button>
+                    <button type="button" class="media-tab-btn active" data-tab="youtube">YouTube</button>
+                    <button type="button" class="media-tab-btn" data-tab="local">Archivos Personales</button>
                 </div>
 
                 <!-- Contenido de las pestañas -->
@@ -407,22 +427,17 @@ if ($conexion) {
             <div id="background-gallery" class="background-gallery">
                 <!-- Los fondos se añadirán aquí desde JS -->
             </div>
-            <div class="modal-actions" style="margin-top: 15px;">
-                <button id="clear-background-btn" class="action-btn secondary-btn">Quitar Fondo</button>
-            </div>
-            <div class="panel-handle">
-                <h2>Fondos del Usuario</h2>
-            </div>
-            <p class="panel-info">Selecciona un fondo subido por ti para personalizar tu espacio de trabajo.</p>
-            <div id="user-background-gallery" class="background-gallery">
+            <h3 style="margin-top:12px;">Mis Fondos</h3>
+            <div id="user-background-gallery" class="background-gallery" aria-multiselectable="true">
                 <!-- Los fondos del usuario se añadirán aquí desde JS -->
             </div>
-            <!-- Botón para subir fondo animado propio -->
-            <div class="upload-background-btn-container">
-
-                <button id="upload-background-btn" class="action-btn secondary-btn">Subir Fondo Animado</button>
+            <br>
+            <!-- Acciones de usuario: subir y eliminar múltiples -->
+            <div class="upload-background-btn-container" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button id="upload-background-btn" class="action-btn primary-btn">Subir Fondo Animado</button>
                 <input type="file" id="background-file-input" accept="image/gif, video/mp4" style="display: none;">
-                <button id="delete-user-background-btn" class="action-btn secondary-btn" style="margin-left:8px;" disabled>Eliminar Fondo Usuario</button>
+                <button id="clear-background-btn" class="action-btn secondary-btn">Quitar Fondo</button>
+                <button id="bulk-delete-toggle-btn" class="action-btn danger-btn">Eliminar Fondos</button>
             </div>
         </section>
 
@@ -433,6 +448,19 @@ if ($conexion) {
     <script src="../JS/PrincipalP3.js"></script>
     <script src="../JS/PrincipalP4.js"></script>
     <script src="../JS/PrincipalP5.js"></script>
+    
+    <!-- Loader: ocultar después de que la ventana haya cargado completamente -->
+    <script>
+        window.addEventListener('load', () => {
+            const loader = document.getElementById('page-loader');
+            if (!loader) return;
+            // Añadir clase para animar fade-out y luego eliminar del DOM
+            loader.classList.add('loaded');
+            setTimeout(() => {
+                try { loader.remove(); } catch (e) { loader.style.display = 'none'; }
+            }, 600);
+        });
+    </script>
     
 </body>
 </html>
