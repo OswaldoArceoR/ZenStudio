@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$stmt) {
         $error = urlencode("Error en la consulta de la base de datos.");
-        header("Location: inicioSesion.php?error=$error&form=login");
+        header("Location: acceso.php?error=$error&form=login");
         exit();
     }
 
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($result->num_rows == 0) {
         $error = urlencode("Usuario o correo no encontrado.");
-        header("Location: inicioSesion.php?error=$error&form=login");
+        header("Location: acceso.php?error=$error&form=login");
         exit();
     }
 
@@ -45,14 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verificar contraseña corrupta
     if (empty($row['contrasenia']) || strlen($row['contrasenia']) < 8) {
         $error = urlencode("La contraseña almacenada está corrupta. Vuelve a registrarte o solicita reinicio de contraseña.");
-        header("Location: inicioSesion.php?error=$error&form=login");
+        header("Location: acceso.php?error=$error&form=login");
         exit();
     }
 
     // Verificar contraseña correcta
     if (!password_verify($password, $row['contrasenia'])) {
         $error = urlencode("Contraseña incorrecta. Inténtalo de nuevo.");
-        header("Location: inicioSesion.php?error=$error&form=login");
+        header("Location: acceso.php?error=$error&form=login");
         exit();
     }
 
