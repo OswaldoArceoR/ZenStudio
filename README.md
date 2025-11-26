@@ -12,7 +12,7 @@ ZenStudio es una aplicación web diseñada para mejorar tu flujo de trabajo medi
 
 ## Screenshots
 
-![App Screenshot](assets/IMAGENES/inicio.png)
+![App Screenshot](IMAGENES/inicio.png)
 
 ![App Screenshot](assets/IMAGENES/pagina1.png)
 
