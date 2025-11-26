@@ -53,6 +53,34 @@ ZenStudio es una aplicación web diseñada para mejorar tu flujo de trabajo medi
 * **SQL:** Base de datos relacional para usuarios, configuración y contenido multimedia (`zenstudio.sql`).
 
 ---
+## Requisitos funcionales
+
+**Gestión de Usuarios**
+•	RF-001: Sistema de registro de usuarios con email y contraseña
+•	RF-002: Sistema de autenticación y login
+•	RF-003: Perfil de usuario con información básica
+•	RF-004: Gestión de preferencias de usuario por sesión
+**Personalización de Entornos**
+•	RF-005: Selección y cambio de fondos escénicos
+•	RF-006: Control de música ambiental (play/pause, volumen)
+•	RF-007: Biblioteca de sonidos ambientales 
+•	RF-008: Posicionamiento y ajuste de elementos en el espacio
+**Gestión de Escenas**
+•	RF-009: Creación de escenas personalizadas
+•	RF-010: Guardado de configuraciones de escenas
+•	RF-011: Carga de escenas preconfiguradas
+**Experiencia Inmersiva**
+•	RF-012: Reproducción simultánea de audio y visuales
+•	RF-013: Transiciones suaves entre elementos
+•	RF-014: Modo pantalla completa
+•	RF-015: Temporizador de sesión de enfoque
+•	RF-016: Minimización de interfaz para máxima inmersión
+**Gestión de Tiempo y Productividad**
+•	RF-017: Sistema Pomodoro Integrado
+•	RF-018: Calendario de Planificación
+•	RF-019: Implementacion de lista para el control de tareas
+
+
 
 ##  Estructura del Proyecto
 
