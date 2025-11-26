@@ -271,7 +271,7 @@ if ($conexion) {
                     </div>
                 </div>
                 <div class="panel-content">
-                    <div id="quick-notes" contenteditable="true" spellcheck="false" data-placeholder="Escribe tus notas rápidas aquí. Usa **negritas** y listas con - o * al inicio de línea."></div>
+                    <div id="quick-notes" contenteditable="true" spellcheck="false" data-placeholder="Escribe tus notas rápidas aquí. Usa **negritas** y listas con - o * al inicio de línea. Pulsa Ctrl+Enter para guardar la nota."></div>
                 </div>
                 <!-- Handle para redimensionar el panel -->
                 <div class="resize-handle"></div>
