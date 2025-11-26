@@ -1,17 +1,36 @@
 <?php
 session_start();
- 
 // Verificar si el usuario está logueado
 if (!isset($_SESSION['user_id'])) {
     header("Location: inicioSesion.php");
     exit();
 }
 
-// Datos del usuario desde sesión
-$username = $_SESSION['username'];
-$nombre = $_SESSION['nombre'];
-$email = $_SESSION['email'];
-$avatar = $_SESSION['avatar'];
+// Datos del usuario desde sesión (usar nombres únicos para evitar colisiones con conexion.php)
+$session_username = $_SESSION['username'];
+$session_nombre = $_SESSION['nombre'];
+$session_email = $_SESSION['email'];
+
+// Determinar avatar a mostrar:
+// Si en BD hay un avatar (ruta) úsalo; si es NULL/ vacío, usa el de sesión (e.g. Google/UI-Avatars)
+$avatar = isset($_SESSION['avatar']) ? $_SESSION['avatar'] : null;
+
+require_once __DIR__ . '/INCLUDES/conexion.php';
+$userId = $_SESSION['user_id'];
+if ($conexion) {
+    if ($stmt = $conexion->prepare('SELECT avatar FROM usuarios WHERE id = ? LIMIT 1')) {
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+        $stmt->bind_result($dbAvatar);
+        if ($stmt->fetch()) {
+            // Usar el avatar de BD si tiene valor válido distinto de NULL/ vacío
+            if (!empty($dbAvatar) && strtoupper($dbAvatar) !== 'NULL') {
+                $avatar = $dbAvatar;
+            }
+        }
+        $stmt->close();
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es" data-theme="light">
@@ -105,8 +124,8 @@ $avatar = $_SESSION['avatar'];
                         <div class="avatar-menu-profile">
                             <img src="<?php echo $avatar; ?>" alt="Avatar de usuario" id="menu-avatar-img" class="menu-avatar">
                             <div class="menu-user-info">
-                                <span id="menu-account-name" class="menu-user-name"><?php echo htmlspecialchars($username); ?></span>
-                                <span id="menu-user-email" class="menu-user-email"><?php echo htmlspecialchars($email); ?></span>
+                                <span id="menu-account-name" class="menu-user-name"><?php echo htmlspecialchars($session_username); ?></span>
+                                <span id="menu-user-email" class="menu-user-email"><?php echo htmlspecialchars($session_email); ?></span>
                             </div>
                         </div>
                         <div class="menu-separator"></div>

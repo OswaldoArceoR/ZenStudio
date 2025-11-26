@@ -18,6 +18,24 @@ function setCookie(name, value, days) {
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
     const qsExists = (sel) => !!document.querySelector(sel);
 
+    // Persistir configuración del usuario en servidor
+    async function saveConfig(partial) {
+        try {
+            const resp = await fetch('guardarConfiguracion.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(partial || {})
+            });
+            // Opcional: log de respuesta
+            const data = await resp.json().catch(() => null);
+            if (!resp.ok || (data && data.status === 'error')) {
+                console.warn('[CONFIG] No se pudo guardar configuración', data);
+            }
+        } catch (e) {
+            console.warn('[CONFIG] Error de red al guardar configuración', e);
+        }
+    }
+
     // ---------- State & Cached DOM ----------
     const body = document.body;
     const mainContent = $('#main-content');
@@ -81,19 +99,24 @@ function setCookie(name, value, days) {
         document.head.appendChild(tag);
     })();
 
-    // Cargar fondo guardado al inicio
-    (() => {
-        const savedBg = localStorage.getItem(LS.ACTIVE_BG);
-        const bgContainer = $('#background-container');
-        if (savedBg && bgContainer) {
-            try {
-                const bgData = JSON.parse(savedBg);
-                applyBackground(bgData.file, bgData.type);
-            } catch (e) {
-                // Fallback para versiones antiguas
-                bgContainer.style.backgroundImage = `url(${savedBg})`;
+    // Cargar configuración desde servidor (sin depender de caché local)
+    (async () => {
+        try {
+            const resp = await fetch('obtenerConfiguracion.php', { headers: { 'Accept': 'application/json' } });
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (!data.success || !data.config) return;
+            const bg = data.config.background;
+            if (bg && bg.url && bg.mime) {
+                applyBackground(bg.url, bg.mime);
+                // No guardar en localStorage para evitar caché persistente
             }
-        }
+            const snd = data.config.sound;
+            if (snd && snd.url) {
+                // No auto-reproducir; crear ítem activo opcional
+                // Podríamos marcar en UI el sonido seleccionado si se desea
+            }
+        } catch (e) { /* silencioso */ }
     })();
 
     // Ocultar mensaje de bienvenida si ya fue cerrado
@@ -191,6 +214,11 @@ function setCookie(name, value, days) {
             }
             applyBackground(bgFile, bgType);
             localStorage.setItem('zen_active_background', JSON.stringify({ file: bgFile, type: bgType }));
+            // Guardar selección de fondo global si hay id disponible
+            const gid = item.dataset.bgGlobalId ? parseInt(item.dataset.bgGlobalId, 10) : null;
+            if (gid && Number.isInteger(gid)) {
+                saveConfig({ fondo_global_id: gid, fondo_usuario_id: null });
+            }
         });
     }
 
@@ -297,6 +325,8 @@ function loadGlobalSoundsBlobs() {
             bgContainer.innerHTML = '';
         }
         localStorage.removeItem(LS.ACTIVE_BG);
+        // Limpiar configuración de fondo en servidor
+        saveConfig({ fondo_global_id: null, fondo_usuario_id: null });
     });
 
     // ---------- Drag / Pointer events for panels ----------
@@ -629,6 +659,7 @@ function loadFondosGlobalBlobs() {
                 const mime = f.mime || 'image/gif';
                 item.dataset.bgFile = f.url;
                 item.dataset.bgType = mime;
+                if (typeof f.id !== 'undefined') item.dataset.bgGlobalId = String(f.id);
 
                 // Crear elemento multimedia según MIME
                 if (mime.startsWith('image/')) {
@@ -803,6 +834,14 @@ function loadFondosGlobalBlobs() {
                 }
                 console.error(`[DEBUG] Error al reproducir ${name}:`, e);
             });
+            // Guardar selección de sonido (global o usuario del servidor)
+            if (id.startsWith('global_')) {
+                const sid = parseInt(id.replace('global_', ''), 10);
+                if (Number.isInteger(sid)) saveConfig({ sonido_global_id: sid, sonido_usuario_id: null });
+            } else if (id.startsWith('srv_user_')) {
+                const sid = parseInt(id.replace('srv_user_', ''), 10);
+                if (Number.isInteger(sid)) saveConfig({ sonido_usuario_id: sid, sonido_global_id: null });
+            }
         } else {
             player.pause();
             player.loop = false;
@@ -1817,13 +1856,7 @@ function loadFondosGlobalBlobs() {
         //  Restaurar Ventanas que dejaste abiertas
         restoreOpenPanels();    
 
-        //  Restaurar el Fondo de Pantalla
-        const savedBg = localStorage.getItem('zen_active_background'); // o LS.ACTIVE_BG
-        const bgContainer = document.getElementById('background-container');
-        if (savedBg && bgContainer) {
-            bgContainer.style.backgroundImage = `url(${savedBg})`;
-            document.body.style.backgroundImage = 'none';
-        }
+        // No restaurar fondo desde localStorage; ahora proviene de la BD
 
         //  Restaurar la música (con un pequeño retraso para que no falle)
         setTimeout(() => {
@@ -1987,6 +2020,11 @@ function loadFondosGlobalBlobs() {
                         currentUserBackgroundId = fondo.id;
                         if (deleteUserBackgroundBtn) deleteUserBackgroundBtn.disabled = false;
                         showToast('Fondo aplicado');
+                        // Guardar selección de fondo del usuario en servidor
+                        if (fondo.id) {
+                            const uid = parseInt(fondo.id, 10);
+                            if (Number.isInteger(uid)) saveConfig({ fondo_usuario_id: uid, fondo_global_id: null });
+                        }
                     });
 
                     gallery.appendChild(item);

@@ -16,6 +16,17 @@ $stmt->execute();
 $stmt->bind_result($username, $nombre, $email, $avatar);
 $stmt->fetch();
 $stmt->close();
+
+// Fallback: si avatar en BD es NULL/ vacío, usar el avatar de la sesión (UI-Avatars/Google)
+if (empty($avatar) || strtoupper($avatar) === 'NULL') {
+    if (isset($_SESSION['avatar']) && !empty($_SESSION['avatar'])) {
+        $avatar = $_SESSION['avatar'];
+    } else {
+        // Último recurso: generar uno por nombre si existe
+        $displayName = isset($nombre) && !empty($nombre) ? $nombre : (isset($username) ? $username : 'Usuario');
+        $avatar = 'https://ui-avatars.com/api/?name=' . urlencode($displayName) . '&background=5882FA&color=fff&size=128';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
