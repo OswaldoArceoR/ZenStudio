@@ -3,77 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZenStudio</title>
-    <link rel="stylesheet" href="CSS/general.css">
+    <title>Bienvenido a ZenStudio</title>
 
-    <!-- Fuentes -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- Estilos base y de la página de inicio (desde Final_UI) -->
+    <link rel="stylesheet" href="Final_UI/styles.css">
+    <link rel="stylesheet" href="Final_UI/inicio.css">
+    <link rel="icon" href="Final_UI/ZenStudioLogo.png" type="image/png">
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
 </head>
-
 <body>
 
-    <!-- BOTÓN SONIDO -->
-    <button id="sound-btn" class="sound-btn">🔇</button>
+    <!-- Contenedor para el componente React del botón de tema -->
+    <div id="theme-toggle-root"></div>
 
-    <!-- BOTÓN MODO OSCURO (REEMPLAZADO) -->
-    <div class="toggle-container">
-        <input type="checkbox" id="themeToggle">
-        <label for="themeToggle" class="toggle">
-            <span class="sun"></span>
-            <span class="moon"></span>
-            <span class="stars"></span>
-            <span class="clouds"></span>
-        </label>
-    </div>
+    <!-- Contenedor para el componente React del héroe de la página -->
+    <div id="hero-root"></div>
 
-    <!-- AUDIO -->
-    <audio id="ambient-sound" loop>
-        <source src="SONIDOS/Sonido de la Naturaleza.mp3" type="audio/mpeg">
-    </audio>
+    <!-- Contenedor para la nueva sección "Acerca de" -->
+    <div id="about-root"></div>
 
-    <!-- HERO -->
-    <header class="hero">
-        <h1 class="title">ZenStudio</h1>
-        <p class="subtitle">Un refugio digital para tu mente</p>
-    </header>
+    <!-- Contenedor para la sección de acciones que aparecerá al hacer scroll -->
+    <div id="actions-root"></div>
 
-    <!-- SECCIONES -->
-    <section class="info-section hidden">
-        <h2>Visión</h2>
-        <p>
-            Ser la plataforma líder que proporcione un espacio digital de calma,
-            productividad y bienestar mental para estudiantes y profesionales.
-        </p>
-    </section>
+    <!-- Fallback sin JavaScript: enlaces directos a acceso -->
+    <noscript>
+        <div style="text-align:center; padding:40px;">
+            <p>Para la mejor experiencia activa JavaScript. Mientras tanto:</p>
+            <p>
+                <a href="PHP/acceso.php" style="margin-right:10px;" class="landing-actions__button">Iniciar Sesión</a>
+                <a href="PHP/acceso.php?form=register" class="landing-actions__button landing-actions__button--secondary">Registrarse</a>
+            </p>
+        </div>
+    </noscript>
 
-    <section class="info-section hidden">
-        <h2>Misión</h2>
-        <p>
-            Ofrecer ambientes personalizados con fondos, sonidos y elementos visuales que
-            favorezcan la concentración, reduzcan el estrés y mejoren el rendimiento académico
-            y laboral.
-        </p>
-    </section>
+    <!-- Este div será el contenedor para nuestra aplicación de React (si se necesita) -->
+    <div id="root"></div>
+ 
+    <!-- 1. Scripts de React y ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
 
-    <section class="info-section hidden">
-        <h2>Valores</h2>
-        <ul>
-            <li>Bienestar y equilibrio</li>
-            <li>Productividad consciente</li>
-            <li>Creatividad y personalización</li>
-            <li>Experiencias digitales tranquilas</li>
-        </ul>
-    </section>
+    <!-- 2. Script de Babel para transpilar JSX en el navegador (ideal para prototipos) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- FOOTER -->
-    <footer class="footer hidden">
-        <button class="btn login" onclick="window.location.href='inicioSesion.php'">Iniciar Sesión</button>
-        <button class="btn register" onclick="window.location.href='registro.html'">Regístrate Aquí</button>
-    </footer>
+    <!-- 3. Script con comportamiento de scroll suave al hacer clic en el indicador -->
+    <script src="JS/script.js"></script>
 
-    <script src="js/script.js"></script>
+    <!-- 4. Componentes compartidos (ThemeToggleButton, etc.) -->
+    <script type="text/babel" src="Final_UI/components.jsx"></script>
+
+    <!-- 5. Copia funcional de los componentes de inicio para index.html -->
+    <script type="text/babel" src="JSX/inicio.index.jsx"></script>
+
+    <!-- 6. Script para montar los componentes -->
+    <script type="text/babel">
+        const themeRoot = ReactDOM.createRoot(document.getElementById('theme-toggle-root'));
+        themeRoot.render(<ThemeToggleButton />);
+
+        const heroRoot = ReactDOM.createRoot(document.getElementById('hero-root'));
+        heroRoot.render(<LandingHero />);
+
+        const actionsRoot = ReactDOM.createRoot(document.getElementById('actions-root'));
+        actionsRoot.render(<LandingActions />);
+
+        const aboutRoot = ReactDOM.createRoot(document.getElementById('about-root'));
+        aboutRoot.render(<AboutSection />);
+    </script>
 </body>
 </html>
-
-    <!-- Hola niño -->
 
