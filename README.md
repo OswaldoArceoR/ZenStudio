@@ -18,22 +18,22 @@ ZenStudio es una aplicación web diseñada para mejorar tu flujo de trabajo medi
 
 ##  Características Principales
 
-** **Sistema de Usuarios:** Registro y autenticación segura.
-* **Persistencia en Base de Datos:** Toda tu configuración, tareas y notas se guardan en una base de datos SQL, permitiendo acceder a tu cuenta desde cualquier dispositivo.
-- **Temporizador Pomodoro**: Totalmente personalizable y con notificaciones visuales para gestionar tus ciclos de trabajo y descanso.
-- **Mezclador de Sonidos Ambientales:**
+1. **Sistema de Usuarios:** Registro y autenticación segura.
+2. **Persistencia en Base de Datos:** Toda tu configuración, tareas y notas se guardan en una base de datos SQL, permitiendo acceder a tu cuenta desde cualquier dispositivo.
+3. **Temporizador Pomodoro**: Totalmente personalizable y con notificaciones visuales para gestionar tus ciclos de trabajo y descanso.
+4. **Mezclador de Sonidos Ambientales:**
  - Incluye sonidos predefinidos de alta calidad (Lluvia, Océano,Río, etc.).
  - Capacidad de subir tus propios audios desde tu equipo.
  - Control de volumen independiente para cada sonido (mezcla a tu gusto).
  - Interruptor "Master Mute" en la barra superior para silenciar todo al instante.
-- **Fondos Animados (Espacios)**: Cambia la atmósfera visual con fondos GIF (anime, hoguera, disco) o sube tus propias imágenes.
-- **Notas Rápidas**: Editor de texto enriquecido que soporta formato básico (negritas, cursivas, listas) y guarda todo automáticamente.
-- **Calendario y Eventos**: Un planificador visual interactivo para organizar tu día.
-- **Gestor de Tareas**: Lista tipo "To-Do" simple con efectos de sonido al completar tareas.
-- **Reproductor Multimedia**: Integración para ver videos de YouTube sin salir de la app y reproductor de archivos locales (MP3).
-- **Interfaz Flotante**: Paneles estilo "ventanas" que puedes arrastrar (drag & drop), abrir y cerrar según lo necesites.
-- **Modo Oscuro/Claro**: Detección automática de preferencia de sistema y botón de cambio manual.
-- **Persistencia de Datos**: Todo tu progreso (tareas, notas, configuración, fondos personalizados) se guarda automáticamente en la memoria del navegador.
+5. **Fondos Animados (Espacios)**: Cambia la atmósfera visual con fondos GIF (anime, hoguera, disco) o sube tus propias imágenes.
+6. **Notas Rápidas**: Editor de texto enriquecido que soporta formato básico (negritas, cursivas, listas) y guarda todo automáticamente.
+7.  **Calendario y Eventos**: Un planificador visual interactivo para organizar tu día.
+8. **Gestor de Tareas**: Lista tipo "To-Do" simple con efectos de sonido al completar tareas.
+9. **Reproductor Multimedia**: Integración para ver videos de YouTube sin salir de la app y reproductor de archivos locales (MP3).
+10. **Interfaz Flotante**: Paneles estilo "ventanas" que puedes arrastrar (drag & drop), abrir y cerrar según lo necesites.
+11. **Modo Oscuro/Claro**: Detección automática de preferencia de sistema y botón de cambio manual.
+12 **Persistencia de Datos**: Todo tu progreso (tareas, notas, configuración, fondos personalizados) se guarda automáticamente en la memoria del navegador.
 
 
 ---
@@ -84,7 +84,7 @@ ZenStudio es una aplicación web diseñada para mejorar tu flujo de trabajo medi
  -	RF-018: Calendario de Planificación
  -	RF-019: Implementacion de lista para el control de tareas
 
-
+---
 
 ##  Estructura del Proyecto
 
