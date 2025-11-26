@@ -33,7 +33,7 @@ ZenStudio es una aplicación web diseñada para mejorar tu flujo de trabajo medi
 9. **Reproductor Multimedia**: Integración para ver videos de YouTube sin salir de la app y reproductor de archivos locales (MP3).
 10. **Interfaz Flotante**: Paneles estilo "ventanas" que puedes arrastrar (drag & drop), abrir y cerrar según lo necesites.
 11. **Modo Oscuro/Claro**: Detección automática de preferencia de sistema y botón de cambio manual.
-12 **Persistencia de Datos**: Todo tu progreso (tareas, notas, configuración, fondos personalizados) se guarda automáticamente en la memoria del navegador.
+12. **Persistencia de Datos**: Todo tu progreso (tareas, notas, configuración, fondos personalizados) se guarda automáticamente en la memoria del navegador.
 
 
 ---
