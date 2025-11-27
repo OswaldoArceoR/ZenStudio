@@ -225,6 +225,8 @@ if ($conexion) {
                     <input type="number" id="minutes-input" name="minutes-input" value="25" min="1" max="120" aria-label="Minutos de enfoque">
                 </div>
                 <div id="timer-display" class="timer-display">25:00</div>
+                <!-- React mount: Timer -->
+                <div id="react-root-timer"></div>
                 <div class="timer-actions">
                     <button id="start-timer" class="action-btn primary-btn" aria-pressed="false">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
@@ -294,6 +296,8 @@ if ($conexion) {
                 </div>
                 <div class="panel-content">
                     <div id="quick-notes" contenteditable="true" spellcheck="false" data-placeholder="Escribe tus notas rápidas aquí. Usa **negritas** y listas con - o * al inicio de línea. Pulsa Ctrl+Enter para guardar la nota."></div>
+                    <!-- React mount: Notes -->
+                    <div id="react-root-notes"></div>
                 </div>
                 <!-- Handle para redimensionar el panel -->
                 <div class="resize-handle"></div>
@@ -343,6 +347,8 @@ if ($conexion) {
                     <input type="file" id="local-music-input" name="local-music-input" accept="audio/*" multiple style="display: none;">
                     <ul id="local-playlist" class="local-playlist"></ul>
                 </div>
+                <!-- React mount: Sounds -->
+                <div id="react-root-sounds"></div>
             </section>
 
             <section id="content-sounds" class="floating-panel" style="left: 600px; top: 550px; width: 350px;" aria-hidden="true">
@@ -432,6 +438,8 @@ if ($conexion) {
             <div id="user-background-gallery" class="background-gallery" aria-multiselectable="true">
                 <!-- Los fondos del usuario se añadirán aquí desde JS -->
             </div>
+            <!-- React mount: Backgrounds -->
+            <div id="react-root-backgrounds"></div>
             <br>
             <!-- Acciones de usuario: subir y eliminar múltiples -->
             <div class="upload-background-btn-container" style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -449,6 +457,10 @@ if ($conexion) {
     <script src="../JS/principalP3.js"></script>
     <script src="../JS/principalP4.js"></script>
     <script src="../JS/principalP5.js"></script>
+    <!-- React CDN and UI bundle -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script type="text/javascript" src="../Final_UI/components.jsx"></script>
     
     <!-- Loader: ocultar después de que la ventana haya cargado completamente -->
     <script>
