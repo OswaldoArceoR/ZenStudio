@@ -78,6 +78,13 @@
     const playlistEl = $('#local-playlist');
     const uploadBtn = $('#upload-local-music-btn');
     const fileInput = $('#local-music-input');
+    // Helper: construir ruta relativa correcta a carpeta PHP desde la página actual
+    function getPhpPath(scriptName) {
+        const path = window.location.pathname || '';
+        const inPhpDir = /\/php\//i.test(path);
+        const clean = String(scriptName).replace(/^\/+/, '');
+        return inPhpDir ? `../PHP/${clean}` : `PHP/${clean}`;
+    }
 
     function playTrack(index) {
         if (index < 0 || index >= localPlaylistFiles.length) return;
@@ -221,10 +228,12 @@
             try {
                 const fd = new FormData();
                 fd.append('music', f);
-                const resp = await fetch('subirMusicaUsuario.php', { method: 'POST', body: fd });
+                // Ruta relativa robusta hacia carpeta PHP
+                const resp = await fetch(getPhpPath('subirMusicaUsuario.php'), { method: 'POST', body: fd });
                 const data = await resp.json().catch(() => null);
                 if (!resp.ok || !data || !data.success) {
-                    if (typeof showToast === 'function') showToast('Error al subir música');
+                    const msg = (data && data.message) ? String(data.message) : 'Error al subir música';
+                    if (typeof showToast === 'function') showToast(msg);
                 } else {
                     if (typeof showToast === 'function') showToast('Música subida');
                 }
@@ -239,27 +248,36 @@
     // --- Integración Música Servidor (musica_usuario) ---
     async function loadServerMusicToPlaylist() {
         try {
-            // Rutas consistentes: siempre acceder a PHP/musica via archivo en misma carpeta PHP
-            const resp = await fetch('obtenerMusicaUsuario.php');
+            // Rutas consistentes: acceder a scripts dentro de carpeta PHP
+            const resp = await fetch(getPhpPath('obtenerMusicaUsuario.php'));
             const data = await resp.json().catch(() => null);
             if (!data || !data.success || !Array.isArray(data.musica)) return;
             for (const m of data.musica) {
                 if (serverTrackIdsInPlaylist.has(m.id)) continue;
                 try {
-                    const br = await fetch(m.url); // m.url apunta a verMusicaUsuario.php?id=...
+                    // Asegurar que m.url apunta a la ruta dentro de PHP si viene relativa
+                    let url = m.url;
+                    if (typeof url === 'string' && !/^https?:\/\//i.test(url) && !/^PHP\//i.test(url)) {
+                        url = getPhpPath(url.replace(/^\/?/, ''));
+                    }
+                    const br = await fetch(url); // m.url apunta a verMusicaUsuario.php?id=...
                     if (!br.ok) continue;
                     const blob = await br.blob();
                     const file = new File([blob], m.nombre, { type: m.mime || 'audio/mpeg' });
                     file._serverId = m.id;
-                    file._serverUrl = m.url;
+                    file._serverUrl = url;
                     localPlaylistFiles.push(file);
                     serverTrackIdsInPlaylist.add(m.id);
                 } catch(e) { /* silencioso */ }
             }
             updatePlaylistUI();
+            ensureDeleteButton();
             updateDeleteControlsVisibility();
         } catch(e) { /* silencioso */ }
     }
+
+    // Contenedor de la playlist (para otros botones auxiliares)
+    const playlistContainer = playlistEl?.parentElement;
 
     // Cargar inicialmente al abrir panel (si existe)
     if (mediaPanel) {
@@ -272,10 +290,10 @@
     });
 
     // Contenedor de la playlist (para otros botones auxiliares)
-    const playlistContainer = playlistEl?.parentElement;
 
-    // Botón eliminar música del servidor (modo selección múltiple)
-    if (playlistContainer && !document.getElementById('toggle-delete-server-music-btn')) {
+    function ensureDeleteButton() {
+        if (!playlistContainer) return;
+        if (document.getElementById('toggle-delete-server-music-btn')) return;
         deleteBtnRef = document.createElement('button');
         deleteBtnRef.id = 'toggle-delete-server-music-btn';
         deleteBtnRef.className = 'action-btn danger-btn';
@@ -318,7 +336,7 @@
             }
             try {
                 const ids = Array.from(selectedServerMusicIds);
-                const r = await fetch('eliminarMusicaUsuario.php', {
+                const r = await fetch(getPhpPath('eliminarMusicaUsuario.php'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ids })
@@ -349,6 +367,8 @@
                 updateDeleteControlsVisibility();
             }
         });
-        // Ocultar si aún no hay música del servidor
         updateDeleteControlsVisibility();
     }
+
+    // Intentar crear el botón al inicio por si el DOM ya está listo
+    ensureDeleteButton();

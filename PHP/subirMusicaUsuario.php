@@ -19,13 +19,17 @@ function ensureMusicTable(mysqli $cx) {
             elseif ($field === 'mime_type') $hasMime = true;
             elseif ($field === 'fecha_subida') $hasFecha = true;
         }
-        // Ajustar PK + AUTO_INCREMENT si falta (evita insertar manualmente id)
-        if ($hasId && !$hasAuto) {
-            $cx->query("ALTER TABLE musica_usuario MODIFY id_musica_usuario INT(11) NOT NULL AUTO_INCREMENT");
-            // Añadir PK si no está
+        // Ajustar PRIMARY KEY y luego AUTO_INCREMENT (orden correcto para evitar error)
+        if ($hasId) {
             $pkCheck = $cx->query("SHOW INDEX FROM musica_usuario WHERE Key_name='PRIMARY'");
-            if (!$pkCheck || $pkCheck->num_rows === 0) {
+            $hasPK = ($pkCheck && $pkCheck->num_rows > 0);
+            // Si falta PK, agregar primero (sin AUTO_INCREMENT).
+            if (!$hasPK) {
                 $cx->query("ALTER TABLE musica_usuario ADD PRIMARY KEY (id_musica_usuario)");
+            }
+            // Si falta AUTO_INCREMENT, aplicarlo ahora (ya es clave o se acaba de crear)
+            if (!$hasAuto) {
+                $cx->query("ALTER TABLE musica_usuario MODIFY id_musica_usuario INT(11) NOT NULL AUTO_INCREMENT");
             }
         }
         // Añadir índice usuario_id si falta
