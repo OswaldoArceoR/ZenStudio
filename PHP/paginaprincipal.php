@@ -444,11 +444,11 @@ if ($conexion) {
 
     </div>
 
-    <script src="../JS/PrincipalP1.js"></script>
-    <script src="../JS/PrincipalP2.js"></script>
-    <script src="../JS/PrincipalP3.js"></script>
-    <script src="../JS/PrincipalP4.js"></script>
-    <script src="../JS/PrincipalP5.js"></script>
+    <script src="../JS/principalP1.js"></script>
+    <script src="../JS/principalP2.js"></script>
+    <script src="../JS/principalP3.js"></script>
+    <script src="../JS/principalP4.js"></script>
+    <script src="../JS/principalP5.js"></script>
     
     <!-- Loader: ocultar después de que la ventana haya cargado completamente -->
     <script>
