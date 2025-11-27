@@ -40,7 +40,7 @@ const AboutSection = () => {
         <section className="about-section">
             <div className="about-section__container">
                 <div className="about-section__image-container">
-                    <img src="IMAGENES/zenstudio.png" alt="Vista previa de la aplicación ZenStudio" />
+                    <img src=".../IMAGENES/zenstudio.png" alt="Vista previa de la aplicación ZenStudio" />
                 </div>
                 <div className="about-section__text-container">
                     <h2>¿Qué es ZenStudio?</h2>

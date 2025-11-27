@@ -10,8 +10,8 @@ session_start();
     <title>Acceso - ZenStudio</title>
 
     <!-- Estilos base y específicos de la UI -->
-    <link rel="stylesheet" href="../Final_UI/styles.css">
-    <link rel="stylesheet" href="../Final_UI/acceso.css">
+    <link rel="stylesheet" href="../CSS/styles.css">
+    <link rel="stylesheet" href="../CSS/acceso.css">
     <link rel="icon" href="../IMAGENES/ZenStudioLogo.png" type="image/png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
 
@@ -86,7 +86,7 @@ session_start();
     </div>
 
     <!-- Lógica de flip y tema -->
-    <script src="../Final_UI/acceso.js"></script>
+    <script src="../JS/acceso.js"></script>
 
     <!-- React y Babel -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
@@ -94,7 +94,7 @@ session_start();
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <!-- Componentes compartidos (ThemeToggleButton) -->
-    <script type="text/babel" src="../Final_UI/components.jsx"></script>
+    <script type="text/babel" src="../JSX/components.jsx"></script>
 
     <script type="text/babel">
         const themeRoot = ReactDOM.createRoot(document.getElementById('theme-toggle-root'));
