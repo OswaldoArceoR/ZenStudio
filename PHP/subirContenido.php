@@ -2,6 +2,12 @@
 session_start();
 require_once __DIR__ . '/../INCLUDES/conexion.php';
 
+// Bloqueo de acceso: solo administradores
+if (empty($_SESSION['rol']) || $_SESSION['rol'] !== 'admin') {
+  header('Location: paginaprincipal.php');
+  exit;
+}
+
 // ===== Límites razonables de subida (como ya tenías) =====
 ini_set('upload_max_filesize', '100M');
 ini_set('post_max_size', '100M');
