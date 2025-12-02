@@ -85,6 +85,23 @@ ZenStudio es una aplicación web diseñada para mejorar tu flujo de trabajo medi
  -	RF-019: Implementacion de lista para el control de tareas
 
 ---
+---
+## Requisitos no funcionales
+
+1. **Usabilidad**
+- RNF-001: Interfaz intuitiva y minimalista
+- RNF-002: Tiempo de carga inferior a 3 segundos
+- RNF-003: Diseño responsive para diferentes dispositivos
+- RNF-004: Navegación con máximo 3 clics para funciones principales
+2. **Rendimiento**
+- RNF-005: Compatibilidad con los principales navegadores (Chrome, Firefox, Safari, Edge)
+- RNF-006: Optimización de recursos multimedia
+- RNF-007: Gestión eficiente de memoria para múltiples elementos
+- RNF-008: Carga progresiva de recursos pesados
+3. **Seguridad**
+- RNF-009: Validación de datos de entrada
+
+---
 
 ##  Estructura del Proyecto
 
