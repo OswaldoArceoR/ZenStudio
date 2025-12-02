@@ -1,0 +1,447 @@
+/* === Base minimalista para la página Subir Contenido === */
+:root {
+    --bg: #0f1115;
+    --surface: #151922;
+    --surface-2: #1b2130;
+    --text: #e6e9ef;
+    --text-muted: #aab2c0;
+    --primary: #7c5cff;
+    --primary-hover: #6a49ff;
+    --danger: #ff5c7c;
+    --border: #242a38;
+    --shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: auto !important;
+}
+
+.background-container {
+    background: linear-gradient(120deg, rgba(124,92,255,0.12), rgba(21,25,34,0.7));
+    min-height: 100vh !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.zen-interface {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+    height: auto !important;
+    min-height: 100%;
+    overflow: visible !important;
+}
+
+.topbar {
+    position: relative; /* evitar captura del scroll */
+    top: auto;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    margin: 0 0 20px;
+    background: rgba(15,17,21,0.7);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+}
+
+.topbar h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    overflow: visible !important;
+    height: auto !important;
+}
+
+/* Reseteo defensivo para evitar bloqueos de scroll */
+html, body, .background-container, .zen-interface, .main-content, .list-section, .upload-form {
+    max-height: none !important;
+}
+
+/* Evitar que algún contenedor interno esté capturando scroll */
+.background-container, .zen-interface, .main-content {
+    position: static !important;
+}
+
+/* Asegurar que las secciones colapsables no generen layouts raros */
+.collapsible { display: none !important; }
+.collapsible.open { display: block !important; }
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 10px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .12s ease, background .12s ease, border-color .12s ease;
+}
+.action-btn:hover { transform: translateY(-1px); background: var(--surface-2); }
+.primary-btn { background: var(--primary); border-color: transparent; }
+.primary-btn:hover { background: var(--primary-hover); }
+.secondary-btn { background: var(--surface); }
+.danger-btn { background: var(--danger); border-color: transparent; }
+
+.message {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 10px 12px;
+    border-radius: 10px;
+}
+.message.success { border-color: rgba(124,92,255,0.6); }
+.message.error { border-color: rgba(255,92,124,0.6); }
+
+/* Selector de tipo */
+.type-selector { display: flex; gap: 10px; }
+.type-btn {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+.type-btn.active { background: var(--primary); border-color: transparent; }
+
+/* Formularios */
+.upload-form { display: none; border: 1px solid var(--border); background: var(--surface); padding: 20px; border-radius: 14px; }
+.upload-form.active { display: block; }
+.form-group { margin-bottom: 16px; }
+.form-select, input[type="file"] { width: 100%; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+
+/* Área de arrastre */
+.file-drop-area {
+    position: relative;
+    border: 1px dashed var(--border);
+    background: var(--surface-2);
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+}
+.file-drop-area.dragover { border-color: var(--primary); }
+.file-drop-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.file-btn { display: inline-block; margin-top: 6px; color: var(--primary); }
+.file-msg { display: block; color: var(--text-muted); }
+
+/* Previsualizaciones */
+.file-preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.preview-item { position: relative; border: 1px solid var(--border); background: var(--surface-2); border-radius: 14px; overflow: hidden; }
+.preview-item img, .preview-item video { width: 100%; height: 200px; object-fit: cover; display: block; }
+.preview-info { padding: 12px; color: var(--text-muted); }
+.inline-form { position: absolute; top: 10px; right: 10px; }
+
+/* Secciones colapsables */
+.section-toggle { cursor: pointer; font-size: 1.1rem; margin: 0 0 8px; }
+.collapsible { display: none; }
+.collapsible.open { display: block; }
+
+/* Lightbox */
+.lightbox-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
+.lightbox-overlay.open { display: flex; }
+.lightbox-content { width: min(920px, 92vw); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.lightbox-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.lightbox-title { font-weight: 600; }
+.lightbox-body { padding: 12px; }
+.lightbox-body img, .lightbox-body video { width: 100%; height: auto; }
+
+/* Ajustes pequeños */
+.audio-icon { color: var(--text-muted); }
+.list-section { border: 1px solid var(--border); background: var(--surface); padding: 16px; border-radius: 14px; }
+.list-section { display: none; }
+.list-section.active { display: block; }
+.list-section + .upload-form, .upload-form + .list-section { margin-top: 8px; }
+
+/* Estilos específicos para la página de subida minimalista */
+
+/* Ajuste del layout principal */
+.main-content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 60vh; /* evitar recortes en contenido */
+}
+
+/* Asegurar que la página pueda hacer scroll y no recorte contenido */
+html, body { height: auto; min-height: 100%; overflow-y: auto; }
+.background-container { min-height: 100%; overflow: visible; }
+.zen-interface { overflow: visible; }
+
+/* Overrides específicos para esta vista para evitar bloqueos de scroll de principalP1 */
+.zen-interface {
+    height: auto !important;
+    min-height: 100vh !important;
+    display: block; /* evitar grid forzado que centre y recorte */
+}
+.topbar { position: sticky; top: 0; z-index: 10; }
+.main-content {
+    overflow: visible !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    padding-top: 20px;
+}
+.background-container { position: fixed; inset: 0; }
+
+/* Ajustes en los formularios */
+.upload-form {
+    padding: 40px;
+    grid-column: 1 / -1; /* si el contenedor usa grid, ocupar toda la fila */
+    width: 70%;
+}
+
+.form-group {
+    margin-bottom: 2rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 12px;
+    color: var(--clr-text);
+}
+
+/* Estilo personalizado para el select */
+.form-select {
+    width: 100%;
+    padding: 14px 20px;
+    background-color: var(--clr-hover);
+    border: 1px solid var(--clr-border);
+    border-radius: 10px;
+    color: var(--clr-text);
+    font-size: 1rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23B0B0B0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 20px center;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-select:hover {
+    border-color: var(--clr-primary);
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--clr-primary);
+    box-shadow: 0 0 0 3px rgba(88, 130, 250, 0.2);
+}
+
+/* Estilo para las opciones del select para mejorar la visibilidad en modo oscuro */
+.form-select option {
+    background-color: var(--clr-background-dark, #121212); /* Fondo oscuro */
+    color: var(--clr-text-dark, #E0E0E0); /* Texto claro */
+}
+
+/* Zona para arrastrar y soltar archivos */
+.file-drop-area {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    border: 2px dashed var(--clr-border);
+    border-radius: 12px;
+    background-color: var(--clr-hover);
+    color: var(--clr-text-muted);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    text-align: center;
+}
+
+.file-drop-area.dragover {
+    border-color: var(--clr-primary);
+    background-color: rgba(88, 130, 250, 0.1);
+}
+
+.file-drop-area .file-msg {
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.file-drop-area .file-btn {
+    color: var(--clr-primary);
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.file-drop-area input[type="file"] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* Previsualización de archivos en grid */
+.file-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+    margin-top: 25px;
+}
+/* ensure preview grids don't overlap following content */
+.list-section .file-preview { margin-bottom: 24px; }
+
+.preview-item {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--clr-hover);
+    border: 1px solid var(--clr-border);
+    animation: fadeIn 0.4s ease forwards;
+    opacity: 0;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.preview-item img,
+.preview-item video {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    max-height: 200px;
+    object-fit: cover;
+    display: block;
+}
+
+.preview-info {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.45) 40%, rgba(0,0,0,0.65) 100%);
+}
+
+.preview-info strong {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #fff;
+}
+
+/* Hover and focus states for nicer look */
+.preview-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.35);
+    border-color: var(--clr-primary);
+}
+
+/* Inline delete form button inside card */
+.inline-form {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+.inline-form .action-btn.secondary-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    border-radius: 8px;
+    opacity: 0.9;
+}
+.inline-form .action-btn.secondary-btn:hover {
+    opacity: 1;
+}
+
+/* Section title spacing */
+.list-section h2 {
+    margin-top: 24px;
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+    color: var(--clr-text);
+}
+
+/* Asegurar que los listados aparezcan debajo del formulario y a ancho completo */
+.list-section {
+    width: 100%;
+    grid-column: 1 / -1; /* abarcar todas las columnas si hay grid */
+    clear: both; /* si hay floats en otros bloques */
+    margin-top: 20px;
+    display: block;
+}
+
+/* Collapsible sections */
+.collapsible { display: none; }
+.collapsible.open { display: block; }
+.section-toggle { cursor: pointer; user-select: none; }
+.section-toggle::after {
+    content: '▾';
+    margin-left: 8px;
+    color: var(--clr-text-muted);
+}
+.collapsible.open + .section-toggle::after { content: '▴'; }
+
+/* Lightbox */
+.lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.lightbox-overlay.open { display: flex; }
+.lightbox-content {
+    background: var(--clr-panel);
+    border: 1px solid var(--clr-border);
+    border-radius: 12px;
+    width: min(900px, 92vw);
+    max-height: 86vh;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+}
+.lightbox-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--clr-border);
+}
+.lightbox-title { color: var(--clr-text); font-weight: 600; }
+.lightbox-body { padding: 10px; background: var(--clr-background); }
+.lightbox-body img, .lightbox-body video {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+/* Botón de subida final */
+.upload-form .action-btn {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+    margin-top: 30px;
+}

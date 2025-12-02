@@ -28,7 +28,63 @@ $message = null;
 $successCount = 0;
 $errorCount   = 0;
 $errors       = [];
+$fondosListado = [];
+$sonidosListado = [];
 
+
+// Eliminar contenido (PRG)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'eliminar') {
+  try {
+    $deleteId   = isset($_POST['delete_id']) ? (int)$_POST['delete_id'] : 0;
+    $deleteTipo = isset($_POST['delete_tipo']) ? strtolower(trim($_POST['delete_tipo'])) : '';
+    if ($deleteId <= 0 || ($deleteTipo !== 'fondos' && $deleteTipo !== 'sonidos')) {
+      throw new Exception('Solicitud de eliminación inválida');
+    }
+    if ($deleteTipo === 'fondos') {
+      // Obtener posible ruta para borrar archivo del servidor
+      $res = $conexion->query("SELECT ruta_archivo FROM fondos_globales WHERE id_fondo = " . $deleteId);
+      $ruta = null;
+      if ($res && $res->num_rows) {
+        $row = $res->fetch_assoc();
+        $ruta = $row['ruta_archivo'];
+      }
+      $conexion->query("DELETE FROM fondos_globales WHERE id_fondo = " . $deleteId);
+      if ($conexion->affected_rows > 0) {
+        if ($ruta) {
+          $path = realpath(__DIR__ . '/' . $ruta);
+          if ($path && file_exists($path)) { @unlink($path); }
+        }
+        $_SESSION['flash_message'] = 'Fondo eliminado correctamente';
+        $_SESSION['flash_class']   = 'success';
+      } else {
+        throw new Exception('No se encontró el fondo');
+      }
+    } else {
+      $res = $conexion->query("SELECT ruta_archivo FROM sonidos_globales WHERE id_sonido = " . $deleteId);
+      $ruta = null;
+      if ($res && $res->num_rows) {
+        $row = $res->fetch_assoc();
+        $ruta = $row['ruta_archivo'];
+      }
+      $conexion->query("DELETE FROM sonidos_globales WHERE id_sonido = " . $deleteId);
+      if ($conexion->affected_rows > 0) {
+        if ($ruta) {
+          $path = realpath(__DIR__ . '/' . $ruta);
+          if ($path && file_exists($path)) { @unlink($path); }
+        }
+        $_SESSION['flash_message'] = 'Sonido eliminado correctamente';
+        $_SESSION['flash_class']   = 'success';
+      } else {
+        throw new Exception('No se encontró el sonido');
+      }
+    }
+  } catch (Exception $e) {
+    $_SESSION['flash_message'] = 'Error al eliminar: ' . $e->getMessage();
+    $_SESSION['flash_class']   = 'error';
+  }
+  header('Location: subirContenido.php');
+  exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   // Normaliza y valida
@@ -71,6 +127,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message .= "<br>Errores:<br>" . implode("<br>", $errors);
       }
     }
+
+    // Flash message + PRG (Post/Redirect/Get)
+    $_SESSION['flash_message'] = $message;
+    $_SESSION['flash_class']   = ($errorCount > 0) ? 'error' : 'success';
+    header('Location: subirContenido.php');
+    exit;
+}
+
+// Listar elementos existentes (GET)
+try {
+  $qF = $conexion->query("SELECT id_fondo AS id, nombre, categoria, tipo_archivo, tamaño, ruta_archivo, mime_type FROM fondos_globales ORDER BY id_fondo DESC LIMIT 100");
+  if ($qF) { while ($r = $qF->fetch_assoc()) { $fondosListado[] = $r; } }
+  $qS = $conexion->query("SELECT id_sonido AS id, nombre, categoria, tipo_archivo, tamaño, ruta_archivo, mime_type FROM sonidos_globales ORDER BY id_sonido DESC LIMIT 100");
+  if ($qS) { while ($r = $qS->fetch_assoc()) { $sonidosListado[] = $r; } }
+} catch (Exception $e) {
+  // Silencioso: no romper la página si listado falla
 }
 
 // ===============================
@@ -356,18 +428,25 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
 }
 ?>
 <!DOCTYPE html>
-<html lang="es" data-theme="light">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Subir Contenido - ZenStudio</title>
-  <link rel="stylesheet" href="../CSS/principalP1.css">
-  <link rel="stylesheet" href="../CSS/principalP2.css">
+  <title>Subir Contenido - ZenStudio Minimalista</title>
   <link rel="stylesheet" href="../CSS/fondos.css">
+  <link rel="stylesheet" href="../CSS/subirMinimalista.css">
   <link rel="icon" href="../IMAGENES/ZenStudioLogo.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* Asegura que solo la sección activa se muestre */
+    .list-section { display: none; }
+    .list-section.active { display: block; }
+    /* Opcional: mantiene los contenedores de formulario en sincronía con el selector */
+    .upload-form { display: none; }
+    .upload-form.active { display: block; }
+  </style>
 </head>
-<body data-theme="light">
+<body data-theme="dark">
   <div class="background-container">
     <div class="zen-interface">
       <header class="topbar">
@@ -375,32 +454,30 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
           <h1>Subir Contenido</h1>
         </div>
         <div class="topbar-right">
-          <button id="theme-toggle" class="icon-toggle">
-            <span id="sun-icon">☀️</span>
-            <span id="moon-icon">🌙</span>
-          </button>
-          <a href="paginaprincipal.php" class="primary-btn">
+          <a href="paginaprincipal.php" class="action-btn secondary-btn">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left">
               <line x1="19" y1="12" x2="5" y2="12"></line>
               <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
+            Volver
           </a>
         </div>
       </header>
       <main class="main-content">
-        <?php if (isset($message)): ?>
-          <div class="message <?php echo ($errorCount > 0) ? 'error' : 'success'; ?>">
-            <?php echo $message; ?>
+        <?php if (isset($_SESSION['flash_message'])): ?>
+          <div class="message <?php echo $_SESSION['flash_class'] ?? 'success'; ?>">
+            <?php echo $_SESSION['flash_message']; ?>
           </div>
+          <?php unset($_SESSION['flash_message'], $_SESSION['flash_class']); ?>
         <?php endif; ?>
 
-        <!-- Selector de tipo (sin cambios) -->
+        <!-- Selector de tipo -->
         <div class="type-selector">
           <button class="type-btn active" data-type="fondos">🎨 Fondos Animados</button>
           <button class="type-btn" data-type="sonidos">🎵 Sonidos Ambientales</button>
         </div>
 
-        <!-- Formulario Fondos → ahora guarda en BLOB por defecto -->
+        <!-- Formulario Fondos -->
         <form action="subirContenido.php" method="POST" enctype="multipart/form-data" class="upload-form active" id="form-fondos">
           <input type="hidden" name="tipo" value="fondos">
           <div class="form-group">
@@ -414,16 +491,61 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
             </select>
           </div>
           <div class="form-group">
-            <label for="archivos-fondos">Seleccionar fondos animados:</label>
-            <input type="file" name="archivos[]" id="archivos-fondos" multiple
-                   accept=".gif,.webp,.apng,.mp4" required class="form-file">
-            <small>Formatos: GIF, WebP, APNG, MP4 (max 50MB cada uno)</small>
+            <label>Archivos de Fondos</label>
+            <div class="file-drop-area">
+              <span class="file-msg">Arrastra y suelta los archivos aquí</span>
+              <span class="file-btn">o selecciona archivos</span>
+              <input type="file" name="archivos[]" id="archivos-fondos" multiple
+                     accept=".gif,.webp,.apng,.mp4" required>
+            </div>
           </div>
+          <small>Formatos permitidos: GIF, WebP, APNG, MP4 (max 50MB c/u)</small>
           <div id="file-preview-fondos" class="file-preview"></div>
           <button type="submit" class="action-btn primary-btn">Subir Fondos</button>
         </form>
 
-        <!-- Formulario Sonidos → ahora guarda en BLOB por defecto -->
+          <!-- Listado de Fondos Subidos -->
+          <section class="list-section" id="fondos-section">
+            <h2 class="section-toggle" data-target="fondos-list">Fondos Subidos</h2>
+            <div class="file-preview collapsible open" id="fondos-list">
+              <?php foreach ($fondosListado as $item): ?>
+                <div class="preview-item">
+                  <?php
+                    $isImg = (strpos($item['tipo_archivo'], 'image/') === 0);
+                    $isVid = (strpos($item['tipo_archivo'], 'video/') === 0);
+                    $src   = null;
+                    if (!empty($item['ruta_archivo'])) {
+                      // usar la ruta relativa almacenada (desde PHP/)
+                      $src = $item['ruta_archivo'];
+                    } else {
+                      // si es BLOB, servir directamente desde el viewer
+                      $src = 'verBlobGlobal.php?tipo=fondos&id=' . $item['id'];
+                    }
+                  ?>
+                  <?php if ($isImg): ?>
+                    <img src="<?php echo htmlspecialchars($src); ?>" alt="<?php echo htmlspecialchars($item['nombre']); ?>" class="preview-click" data-src="<?php echo htmlspecialchars($src); ?>" data-title="<?php echo htmlspecialchars($item['nombre']); ?>">
+                  <?php elseif ($isVid): ?>
+                    <video src="<?php echo htmlspecialchars($src); ?>" muted autoplay loop class="preview-click" data-src="<?php echo htmlspecialchars($src); ?>" data-title="<?php echo htmlspecialchars($item['nombre']); ?>"></video>
+                  <?php endif; ?>
+                  <div class="preview-info">
+                    <strong><?php echo htmlspecialchars($item['nombre']); ?></strong>
+                    <div><?php echo htmlspecialchars($item['categoria']); ?> · <?php echo number_format(($item['tamaño']/1024/1024), 2); ?> MB</div>
+                  </div>
+                  <form method="POST" action="subirContenido.php" class="inline-form">
+                    <input type="hidden" name="accion" value="eliminar">
+                    <input type="hidden" name="delete_tipo" value="fondos">
+                    <input type="hidden" name="delete_id" value="<?php echo (int)$item['id']; ?>">
+                    <button type="submit" class="action-btn secondary-btn">Eliminar</button>
+                  </form>
+                </div>
+              <?php endforeach; ?>
+              <?php if (empty($fondosListado)): ?>
+                <p class="muted">Aún no hay fondos subidos.</p>
+              <?php endif; ?>
+            </div>
+          </section>
+
+        <!-- Formulario Sonidos -->
         <form action="subirContenido.php" method="POST" enctype="multipart/form-data" class="upload-form" id="form-sonidos">
           <input type="hidden" name="tipo" value="sonidos">
           <div class="form-group">
@@ -438,36 +560,62 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
             </select>
           </div>
           <div class="form-group">
-            <label for="archivos-sonidos">Seleccionar sonidos ambientales:</label>
-            <input type="file" name="archivos[]" id="archivos-sonidos" multiple
-                   accept=".mp3,.wav,.ogg,.m4a,.mp4" required class="form-file">
-            <small>Formatos: MP3, WAV, OGG, M4A (max 20MB cada uno)</small>
+            <label>Archivos de Sonido</label>
+            <div class="file-drop-area">
+              <span class="file-msg">Arrastra y suelta los archivos aquí</span>
+              <span class="file-btn">o selecciona archivos</span>
+              <input type="file" name="archivos[]" id="archivos-sonidos" multiple
+                     accept=".mp3,.wav,.ogg,.m4a" required>
+            </div>
           </div>
+          <small>Formatos permitidos: MP3, WAV, OGG, M4A (max 20MB c/u)</small>
           <div id="file-preview-sonidos" class="file-preview"></div>
           <button type="submit" class="action-btn primary-btn">Subir Sonidos</button>
         </form>
 
-        <!-- Contenido existente (sin cambios visuales) -->
-        <div class="content-sections">
-          <div class="content-section active" id="section-fondos">
-            <h2>Fondos Existentes</h2>
-            <div id="fondos-list" class="fondos-grid"></div>
-          </div>
-          <div class="content-section" id="section-sonidos">
-            <h2>Sonidos Existentes</h2>
-            <div id="sonidos-list" class="sonidos-grid"></div>
-          </div>
-        </div>
+          <!-- Listado de Sonidos Subidos -->
+          <section class="list-section" id="sonidos-section">
+            <h2 class="section-toggle" data-target="sonidos-list">Sonidos Subidos</h2>
+            <div class="file-preview collapsible open" id="sonidos-list">
+              <?php foreach ($sonidosListado as $item): ?>
+                <div class="preview-item">
+                  <?php
+                    $src = null;
+                    if (!empty($item['ruta_archivo'])) {
+                      $src = $item['ruta_archivo'];
+                    } else {
+                      $src = 'verBlobGlobal.php?tipo=sonidos&id=' . $item['id'];
+                    }
+                  ?>
+                  <div class="audio-icon" style="font-size:2rem;text-align:center;padding:20px;">🎵</div>
+                  <audio src="<?php echo htmlspecialchars($src); ?>" controls></audio>
+                  <div class="preview-info">
+                    <strong><?php echo htmlspecialchars($item['nombre']); ?></strong>
+                    <div><?php echo htmlspecialchars($item['categoria']); ?> · <?php echo number_format(($item['tamaño']/1024/1024), 2); ?> MB</div>
+                  </div>
+                  <form method="POST" action="subirContenido.php" class="inline-form">
+                    <input type="hidden" name="accion" value="eliminar">
+                    <input type="hidden" name="delete_tipo" value="sonidos">
+                    <input type="hidden" name="delete_id" value="<?php echo (int)$item['id']; ?>">
+                    <button type="submit" class="action-btn secondary-btn">Eliminar</button>
+                  </form>
+                </div>
+              <?php endforeach; ?>
+              <?php if (empty($sonidosListado)): ?>
+                <p class="muted">Aún no hay sonidos subidos.</p>
+              <?php endif; ?>
+            </div>
+          </section>
+
       </main>
     </div>
   </div>
 
   <script>
-    // ---- UI (sin cambios relevantes; solo aseguramos previews) ----
     document.addEventListener('DOMContentLoaded', function() {
-      const typeButtons     = document.querySelectorAll('.type-btn');
-      const forms           = document.querySelectorAll('.upload-form');
-      const contentSections = document.querySelectorAll('.content-section');
+      const typeButtons = document.querySelectorAll('.type-btn');
+      const forms       = document.querySelectorAll('.upload-form');
+      const sections    = document.querySelectorAll('.list-section');
 
       typeButtons.forEach(btn => {
         btn.addEventListener('click', function() {
@@ -480,21 +628,60 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
             if (form.id === `form-${type}`) form.classList.add('active');
           });
 
-          contentSections.forEach(section => {
-            section.classList.remove('active');
-            if (section.id === `section-${type}`) section.classList.add('active');
+          sections.forEach(sec => {
+            sec.classList.remove('active');
           });
+          const targetSec = document.getElementById(`${type}-section`);
+          if (targetSec) targetSec.classList.add('active');
         });
       });
 
       setupFilePreview('archivos-fondos',  'file-preview-fondos');
       setupFilePreview('archivos-sonidos','file-preview-sonidos');
+
+      // Estado inicial: mostrar fondos
+      document.getElementById('fondos-section')?.classList.add('active');
+
+      // Toggle sections
+      document.querySelectorAll('.section-toggle').forEach(h => {
+        h.addEventListener('click', () => {
+          const id = h.dataset.target;
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.classList.toggle('open');
+        });
+      });
+
+      // Lightbox for previews
+      const lb = createLightbox();
+      document.querySelectorAll('.preview-click').forEach(el => {
+        el.addEventListener('click', () => {
+          const src = el.dataset.src || el.getAttribute('src');
+          const title = el.dataset.title || '';
+          const isVideo = el.tagName.toLowerCase() === 'video';
+          lb.open(src, title, isVideo);
+        });
+      });
+
+      // Lógica para el área de drag and drop
+      document.querySelectorAll('.file-drop-area').forEach(area => {
+        area.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          area.classList.add('dragover');
+        });
+        area.addEventListener('dragleave', () => {
+          area.classList.remove('dragover');
+        });
+        area.addEventListener('drop', () => {
+          area.classList.remove('dragover');
+        });
+      });
     });
 
     function setupFilePreview(inputId, previewId) {
       const fileInput   = document.getElementById(inputId);
       const filePreview = document.getElementById(previewId);
-      fileInput.addEventListener('change', function(e) {
+      const handleFiles = (e) => {
         filePreview.innerHTML = '';
         const files = Array.from(e.target.files);
         files.forEach(file => {
@@ -523,25 +710,57 @@ function procesarSonidosRuta($categoria, $uploadedFiles, &$successCount, &$error
           const info = document.createElement('div');
           info.className = 'preview-info';
           info.innerHTML = `
-            <div><strong>${file.name}</strong></div>
+            <strong>${file.name}</strong>
             <div>${(file.size / 1024 / 1024).toFixed(2)} MB</div>
-            <div>${file.type}</div>
           `;
           previewItem.appendChild(info);
           filePreview.appendChild(previewItem);
         });
-      });
+      };
+
+      fileInput.addEventListener('change', handleFiles);
     }
 
-    // ---- Tema (nuevo código) ----
-    const themeToggle = document.getElementById('theme-toggle');
-    const body = document.body;
+    function createLightbox() {
+      const overlay = document.createElement('div');
+      overlay.className = 'lightbox-overlay';
+      const content = document.createElement('div');
+      content.className = 'lightbox-content';
+      const header = document.createElement('div');
+      header.className = 'lightbox-header';
+      const titleEl = document.createElement('div');
+      titleEl.className = 'lightbox-title';
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'action-btn secondary-btn';
+      closeBtn.textContent = 'Cerrar';
+      header.appendChild(titleEl);
+      header.appendChild(closeBtn);
+      const body = document.createElement('div');
+      body.className = 'lightbox-body';
+      content.appendChild(header);
+      content.appendChild(body);
+      overlay.appendChild(content);
+      document.body.appendChild(overlay);
 
-    themeToggle.addEventListener('click', () => {
-        const currentTheme = body.getAttribute('data-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-        body.setAttribute('data-theme', newTheme);
-    });
+      function open(src, title, isVideo) {
+        titleEl.textContent = title;
+        body.innerHTML = '';
+        if (isVideo) {
+          const v = document.createElement('video');
+          v.src = src; v.controls = true; v.autoplay = true; v.loop = true;
+          body.appendChild(v);
+        } else {
+          const img = document.createElement('img');
+          img.src = src;
+          body.appendChild(img);
+        }
+        overlay.classList.add('open');
+      }
+      function close() { overlay.classList.remove('open'); }
+      closeBtn.addEventListener('click', close);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+      return { open, close };
+    }
   </script>
 </body>
 </html>

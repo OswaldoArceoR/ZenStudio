@@ -3,14 +3,19 @@
 // verBlobGlobal.php
 require_once __DIR__ . '/../INCLUDES/conexion.php';
 
-$tipo = $_GET['tipo'] ?? '';
+$tipo = isset($_GET['tipo']) ? strtolower(trim($_GET['tipo'])) : '';
 $id   = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
+// Acepta 'fondo'|'sonido' y también 'fondos'|'sonidos'
+if ($tipo === 'fondos') { $tipo = 'fondo'; }
+if ($tipo === 'sonidos') { $tipo = 'sonido'; }
 
 if (!in_array($tipo, ['fondo', 'sonido'], true) || $id <= 0) {
   http_response_code(400);
   exit('Parámetros inválidos');
 }
 
+// Usar columna id (coincide con inserciones actuales)
 if ($tipo === 'fondo') {
   $sql = "SELECT archivo_blob AS blob_data, mime_type FROM fondos_globales WHERE id_fondo = ?";
 } else {
@@ -51,30 +56,6 @@ if ($mime === 'application/octet-stream') {
 // Seguridad y compatibilidad
 header("Content-Type: {$mime}");
 header("Accept-Ranges: bytes");
-
-$range = $_SERVER['HTTP_RANGE'] ?? null;
-if ($range && preg_match('/bytes=(\\d*)-(\\d*)/i', $range, $m)) {
-  $start = ($m[1] !== '') ? (int)$m[1] : 0;
-  $end   = ($m[2] !== '') ? (int)$m[2] : ($size - 1);
-
-  if ($start > $end || $start >= $size) {
-    header("Content-Range: bytes */{$size}");
-    http_response_code(416);
-    exit;
-  }
-
-  $length = $end - $start + 1;
-  header("Content-Range: bytes {$start}-{$end}/{$size}");
-  header("Content-Length: {$length}");
-  http_response_code(206);
-  echo substr($data, $start, $length);
-  exit;
-}
-
-header("Content-Length: {$size}");
-http_response_code(200);
-echo $data;
-exit;
 
 $range = $_SERVER['HTTP_RANGE'] ?? null;
 if ($range && preg_match('/bytes=(\d*)-(\d*)/i', $range, $m)) {
