@@ -5,7 +5,7 @@ ZenStudio es una aplicación web diseñada para mejorar tu flujo de trabajo medi
 
 
 ## Demo
-[Link de la paguina en el server, pendiente!](https://github.com/OswaldoArceoR/ZenStudio.git)
+[ZenStudio](http://zenstudio.atwebpages.com/)
 
 
 
